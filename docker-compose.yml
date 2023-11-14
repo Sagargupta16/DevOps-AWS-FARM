@@ -1,0 +1,18 @@
+# $schema: "https://github.com/compose-spec/compose-spec/blob/master/schema/compose-spec.json",
+version: '3.10'
+services:
+  app:
+    build: .
+    ports:
+      - 8000:8000
+    env_file:
+      - ./config/secrets.yml
+    environment:
+      - MONGODB_URL=${MONGODB_DATABASE}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - tests
+  tests:
+    build: .
+    command: sh -c 'coverage run -m pytest && coverage report --fail-under=80'

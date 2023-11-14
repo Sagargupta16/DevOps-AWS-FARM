@@ -1,0 +1,94 @@
+.app {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
+  margin: 20px auto; /* Update margin property to include "auto" */
+  width: 80%;
+}
+
+.main {
+  flex-basis: 70%;
+  margin: 30px;
+}
+
+.heads {
+  font-size: 30px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  width: 100%;
+  text-align: center;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.form input {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 14px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  box-sizing: border-box;
+  margin-bottom: 10px;
+}
+
+.btn {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 14px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  height: 35px;
+  border-radius: 5px;
+  margin: 10px 0;
+}
+
+.btn:hover {
+  background-color: #0069d9;
+}
+
+.content {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.content div {
+  margin-bottom: 5px;
+}
+
+.content input {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 14px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  box-sizing: border-box;
+  margin-bottom: 10px;
+}
+
+@media (max-width>=768px) {
+  .app {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .main {
+    width: 80%;
+    flex-basis: 100%;
+    margin-bottom: 20px;
+  }
+}
+

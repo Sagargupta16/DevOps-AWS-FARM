@@ -1,0 +1,26 @@
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  defaultFormatter:
+    format: '%(asctime)s %(levelname)s %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+
+handlers:
+  consoleHandler:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: defaultFormatter
+    stream: ext://sys.stdout
+
+  fileHandler:
+    class: logging.FileHandler
+    level: DEBUG
+    formatter: defaultFormatter
+    filename: app.log
+    mode: a
+
+loggers:
+  root:
+    level: INFO
+    handlers: [consoleHandler, fileHandler]

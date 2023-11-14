@@ -1,0 +1,57 @@
+# Ignore compiled Python bytecode
+__pycache__/
+*.pyc
+
+# Ignore IDE files
+.idea/
+.vscode/
+
+# Ignore environment-specific files
+.env
+
+# Ignore log files
+*.log
+
+# Ignore cache and temporary files
+.cache/
+*.swp
+*.swo
+*.tmp
+
+# Ignore system-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore compiled files or build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+*.jar
+*.war
+*.ear
+
+# Ignore package manager directories
+/node_modules/
+/bower_components/
+
+# Ignore documentation and generated files
+/docs/
+/generated/
+
+# Ignore database files
+*.db
+*.sqlite
+
+#Virtual Environment
+.venv
+
+
+# # Ignore YAML configuration files
+# *.yml
+
+# # Ignore sensitive or personal files
+# secrets.yml
+
+# Ignore any other custom entries specific to your project
+

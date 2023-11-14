@@ -1,0 +1,12 @@
+.git
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.swp
+*.log
+*.tar.gz
+*.zip
+*.rar
+.dockerignore
+client
