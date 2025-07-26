@@ -49,6 +49,7 @@ Thumbs.db
 
 #Virtual Environment
 .venv
+venv/
 
 
 # # Ignore YAML configuration files
