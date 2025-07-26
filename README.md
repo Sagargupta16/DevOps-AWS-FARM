@@ -2,6 +2,21 @@
 
 A full-stack web application built with FastAPI, React, and MongoDB, containerized with Docker and deployed on AWS.
 
+## 🚀 Quick Start
+
+**⚠️ IMPORTANT: Before running the application, you MUST configure your database connection:**
+
+```bash
+# 1. Copy the secrets template
+cp config/secrets.yml.example config/secrets.yml
+
+# 2. Edit config/secrets.yml with your MongoDB Atlas credentials
+# 3. Then run the application
+docker-compose up --build
+```
+
+For detailed setup instructions, see [Getting Started](#getting-started) below.
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -39,12 +54,85 @@ DevOps-AWS-FARM is a modern full-stack web application that demonstrates DevOps 
 
 ## Architecture
 
+### Application Architecture
+
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   React Client  │───▶│  FastAPI Server │───▶│   MongoDB DB    │
-│   (Port 3000)   │    │   (Port 8000)   │    │                 │
+│   React Client  │───▶│  FastAPI Server │───▶│   MongoDB Atlas │
+│   (Frontend)    │    │   (Backend)     │    │   (Database)    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
+
+### AWS Deployment Flow
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   GitHub Repo   │───▶│   Amazon ECR    │───▶│   Amazon ECS    │
+│  (Source Code)  │    │ (Docker Images) │    │  (Containers)   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       ▲                       │
+         │                       │                       │
+         ▼                       │                       ▼
+┌─────────────────┐              │              ┌─────────────────┐
+│ GitHub Actions  │──────────────┘              │ Application     │
+│    (CI/CD)      │                             │ Load Balancer   │
+└─────────────────┘                             └─────────────────┘
+```
+
+### CI/CD Workflow Diagram
+
+```
+┌─────────────┐
+│ Developer   │
+│ Push Code   │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   GitHub    │
+│ Repository  │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   GitHub    │───▶│  Run Tests  │───▶│    Build    │
+│   Actions   │    │  Coverage   │    │   Docker    │
+│  Triggered  │    │    80%+     │    │    Image    │
+└─────────────┘    └──────┬──────┘    └──────┬──────┘
+                          │                  │
+                          ▼                  ▼
+                 ┌─────────────┐    ┌─────────────┐
+                 │    Tests    │    │    Push     │
+                 │   Failed?   │    │   to ECR    │
+                 │    Stop     │    │             │
+                 └─────────────┘    └──────┬──────┘
+                                           │
+                                           ▼
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   Health    │◀───│   Deploy    │◀───│   Update    │
+│   Check     │    │   to ECS    │    │ ECS Service │
+│             │    │             │    │             │
+└─────────────┘    └─────────────┘    └─────────────┘
+       │
+       ▼
+┌─────────────┐
+│ Application │
+│    Live     │
+│             │
+└─────────────┘
+```
+
+### CI/CD Process Steps
+
+1. **Code Push**: Developer pushes code to GitHub repository
+2. **GitHub Actions Trigger**: Workflow automatically starts on push to main branch
+3. **Run Tests**: Execute pytest with 80% coverage requirement
+4. **Test Gate**: If tests fail, deployment stops here
+5. **Build Docker Image**: Creates containerized version of the application (only if tests pass)
+6. **Push to ECR**: Uploads Docker image to Amazon Elastic Container Registry
+7. **Deploy to ECS**: Updates ECS service with new Docker image
+8. **Health Check**: Verifies application is running correctly
+9. **Go Live**: Application is accessible to users
 
 ## Getting Started
 
@@ -85,9 +173,34 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-**Configure environment variables:**
-1. Copy `config/secrets.yml.example` to `config/secrets.yml` (if exists)
-2. Update MongoDB connection string and other configuration
+**Configure MongoDB Connection (IMPORTANT):**
+
+⚠️ **Before running the application, you MUST configure your MongoDB connection:**
+
+1. **Copy the secrets template:**
+   ```bash
+   cp config/secrets.yml.example config/secrets.yml
+   ```
+
+2. **Update `config/secrets.yml` with your MongoDB Atlas credentials:**
+   ```yaml
+   mongodb:
+     host: your-cluster.mongodb.net
+     port: 27017
+     username: your-username
+     password: your-password
+     database: mongodb+srv://your-username:your-password@your-cluster.mongodb.net/your-database-name
+   ```
+
+3. **Get MongoDB Atlas credentials:**
+   - Go to [MongoDB Atlas](https://cloud.mongodb.com/)
+   - Create a cluster or use existing one
+   - Go to Database Access and create a database user
+   - Go to Network Access and whitelist your IP (or 0.0.0.0/0 for development)
+   - Click "Connect" on your cluster and choose "Connect your application"
+   - Copy the connection string and update the values in `secrets.yml`
+
+📝 **Note:** The `secrets.yml` file is ignored by git for security. Never commit database credentials to version control.
 
 #### 3. Frontend Setup
 
@@ -105,6 +218,16 @@ npm run build
 This will create the `client_build` directory that the FastAPI server serves.
 
 ### Docker Setup
+
+**⚠️ IMPORTANT: Configure secrets before running Docker!**
+
+Before using Docker, make sure to configure your MongoDB connection:
+
+```bash
+# Copy the secrets template
+cp config/secrets.yml.example config/secrets.yml
+# Edit config/secrets.yml with your MongoDB Atlas credentials
+```
 
 For a quick setup using Docker:
 
@@ -191,46 +314,86 @@ Once the FastAPI server is running, you can access:
 
 ## Deployment
 
-### AWS Deployment
+### AWS Deployment with GitHub Actions
 
-1. **Build Docker Image:**
+The application automatically deploys to AWS when code is pushed to the main branch:
+
+**Docker Image → ECR → ECS**
+
+#### GitHub Actions Workflow
+
+The `.github/workflows/deploy.yml` file contains the deployment pipeline:
+
+```yaml
+# 1. Run Tests First
+- name: Run tests with coverage
+  run: python -m pytest tests/ --cov=. --cov-report=xml --cov-fail-under=80
+
+# 2. Build Docker Image (only if tests pass)
+- name: Build Docker image
+  run: docker build -t devops-aws-farm .
+
+# 3. Push to Amazon ECR
+- name: Push to ECR
+  run: |
+    aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+    docker tag devops-aws-farm:latest $ECR_REGISTRY/$ECR_REPOSITORY:latest
+    docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+# 4. Deploy to Amazon ECS
+- name: Deploy to ECS
+  run: |
+    aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE --force-new-deployment
+    aws ecs wait services-stable --cluster $ECS_CLUSTER --services $ECS_SERVICE
+```
+
+#### Required GitHub Secrets
+
+Add these secrets in your GitHub repository settings:
+
+```
+AWS_ACCESS_KEY_ID          # AWS access key
+AWS_SECRET_ACCESS_KEY      # AWS secret key  
+AWS_REGION                 # AWS region (e.g., us-east-1)
+ECR_REPOSITORY_URI         # ECR repository URI
+ECS_CLUSTER_NAME           # ECS cluster name
+ECS_SERVICE_NAME           # ECS service name
+```
+
+#### Manual Deployment Commands
+
+For manual deployment, use these commands:
+
 ```bash
+# 1. Build and tag Docker image
 docker build -t devops-aws-farm .
-```
+docker tag devops-aws-farm:latest your-account.dkr.ecr.us-east-1.amazonaws.com/devops-aws-farm:latest
 
-2. **Tag for AWS ECR:**
-```bash
-docker tag devops-aws-farm:latest your-account.dkr.ecr.region.amazonaws.com/devops-aws-farm:latest
-```
+# 2. Login to ECR and push image
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin your-account.dkr.ecr.us-east-1.amazonaws.com
+docker push your-account.dkr.ecr.us-east-1.amazonaws.com/devops-aws-farm:latest
 
-3. **Push to ECR:**
-```bash
-aws ecr get-login-password --region your-region | docker login --username AWS --password-stdin your-account.dkr.ecr.region.amazonaws.com
-docker push your-account.dkr.ecr.region.amazonaws.com/devops-aws-farm:latest
-```
-
-### Local Production Deployment
-```bash
-# Build production image
-docker build -t devops-aws-farm:prod .
-
-# Run production container
-docker run -p 8000:8000 -d devops-aws-farm:prod
+# 3. Update ECS service
+aws ecs update-service --cluster your-cluster --service your-service --force-new-deployment
 ```
 
 ## Project Structure
 
 ```
 DevOps-AWS-FARM/
-├── client/                 # React frontend application
+├── .github/
+│   └── workflows/
+│       └── deploy.yml     # GitHub Actions CI/CD pipeline
+├── client/                # React frontend application
 │   ├── src/               # React source code
 │   ├── public/            # Static assets
 │   └── package.json       # Node.js dependencies
 ├── client_build/          # Built React app (served by FastAPI)
 ├── config/                # Configuration files
+│   ├── secrets.yml.example # Template for MongoDB credentials
+│   ├── secrets.yml        # Your actual MongoDB credentials (git-ignored)
 │   ├── logging.py         # Logging configuration
-│   ├── secrets_parser.py  # Secrets management
-│   └── secrets.yml        # Environment variables
+│   └── secrets_parser.py  # Configuration parser
 ├── models/                # Pydantic data models
 │   ├── blog_models.py     # Blog-related models
 │   └── user_models.py     # User-related models

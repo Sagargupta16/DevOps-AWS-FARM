@@ -8,6 +8,10 @@ __pycache__/
 
 # Ignore environment-specific files
 .env
+config/secrets.yml
+
+# Allow secrets example file to be tracked
+!config/secrets.yml.example
 
 # Ignore log files
 *.log
@@ -54,4 +58,6 @@ Thumbs.db
 # secrets.yml
 
 # Ignore any other custom entries specific to your project
+.pytest_cache/
+.coverage
 
