@@ -8,4 +8,4 @@ RUN apk add --no-cache gcc musl-dev python3-dev && \
     pip install pyyaml==6.0.1 && \
     chmod +x wait-for-mongodb.py
 EXPOSE 8000
-CMD ["sh", "-c", "python wait-for-mongodb.py && uvicorn main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "python wait-for-mongodb.py && coverage run -m pytest && coverage report --fail-under=${COVERAGE_THRESHOLD:-80}"]

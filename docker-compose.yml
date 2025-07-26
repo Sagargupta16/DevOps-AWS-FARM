@@ -1,18 +1,41 @@
-# $schema: "https://github.com/compose-spec/compose-spec/blob/master/schema/compose-spec.json",
-version: '3.10'
+# $schema: "https://github.com/compose-spec/compose-spec/blob/master/schema/compose-spec.json"
 services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE}
+    volumes:
+      - mongodb_data:/data/db
+
   app:
     build: .
     ports:
-      - 8000:8000
-    env_file:
-      - ./config/secrets.yml
+      - "${APP_PORT:-8000}:8000"
     environment:
-      - MONGODB_URL=${MONGODB_DATABASE}
+      - MONGODB_URL=${MONGODB_URL}
+      - MONGODB_DATABASE=${MONGODB_DATABASE}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DEBUG=${DEBUG:-true}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
+      - mongodb
       - tests
   tests:
-    build: .
-    command: sh -c 'coverage run -m pytest && coverage report --fail-under=80'
+    build:
+      context: .
+      dockerfile: Dockerfile.tests
+    environment:
+      - MONGODB_URL=${MONGODB_URL}
+      - MONGODB_DATABASE=${MONGODB_DATABASE}
+      - COVERAGE_THRESHOLD=${COVERAGE_THRESHOLD:-80}
+    depends_on:
+      - mongodb
+
+volumes:
+  mongodb_data:
