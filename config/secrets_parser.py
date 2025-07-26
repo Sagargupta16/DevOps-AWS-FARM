@@ -23,9 +23,12 @@ if not mongodb_url:
         else:
             mongodb_url = f"mongodb://{mongodb_username}:{mongodb_password}@{mongodb_host}:{mongodb_port}/{mongodb_database}"
     except Exception as e:
-        print(f"Error reading secrets file: {e}")
-        # Default local MongoDB connection
+        print(f"Warning: Could not read secrets file: {e}")
+        print("Using default local MongoDB connection for testing/development")
+        # Default local MongoDB connection for CI/testing
         mongodb_url = "mongodb://localhost:27017/blogging"
+
+print(f"MongoDB connection configured: {mongodb_url.replace(mongodb_url.split('@')[0].split('://')[1] + '@', '***:***@') if '@' in mongodb_url else mongodb_url}")
 
 
 def get_database():
