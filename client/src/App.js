@@ -1,311 +1,326 @@
-import React, { useState, useEffect } from "react";
-import "./App.css";
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import './App.css';
+
+const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:8000';
 
 function App() {
   const [users, setUsers] = useState([]);
   const [blogs, setBlogs] = useState([]);
-  const [showUserForm, setShowUserForm] = useState(false);
-  const [showBlogForm, setShowBlogForm] = useState(false);
+  const [activeTab, setActiveTab] = useState('users');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // User form states
+  const [userForm, setUserForm] = useState({
+    name: '',
+    email: '',
+    password: ''
+  });
   const [editingUser, setEditingUser] = useState(null);
+
+  // Blog form states
+  const [blogForm, setBlogForm] = useState({
+    title: '',
+    content: '',
+    creator: ''
+  });
   const [editingBlog, setEditingBlog] = useState(null);
 
   useEffect(() => {
-    fetch("/user")
-      .then((response) => response.json())
-      .then((data) => setUsers(data));
-    fetch("/blog")
-      .then((response) => response.json())
-      .then((data) => setBlogs(data));
+    fetchUsers();
+    fetchBlogs();
   }, []);
 
-  const addUser = (event) => {
-    event.preventDefault();
-    const name = document.getElementById("name").value;
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("pass").value;
-
-    fetch("/user", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name, email, password }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        setUsers([
-          ...users,
-          {
-            name: name,
-            email: email,
-            password: password,
-          },
-        ]);
-        document.getElementById("name").value = "";
-        document.getElementById("email").value = "";
-        document.getElementById("pass").value = "";
-        setShowUserForm(false);
-      });
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_BASE_URL}/user`);
+      setUsers(response.data);
+    } catch (err) {
+      setError('Error fetching users');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateUser = (id) => {
-    const name = document.getElementById("name1").value;
-    const email = document.getElementById("email1").value;
-    const password = document.getElementById("pass1").value;
-    fetch(`/user/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name, email, password }),
-    })
-      .then((response) => response.json())
-      .then((updatedUser) => {
-        const updatedUsers = users.map((user) => {
-          if (user.id === id) {
-            return updatedUser;
-          }
-          return user;
-        });
-        setUsers(updatedUsers);
+  const fetchBlogs = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_BASE_URL}/blog`);
+      setBlogs(response.data);
+    } catch (err) {
+      setError('Error fetching blogs');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // User CRUD operations
+  const handleUserSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      if (editingUser) {
+        await axios.put(`${API_BASE_URL}/user/${editingUser.id}`, userForm);
         setEditingUser(null);
-        cancelEditUser();
-      });
+      } else {
+        await axios.post(`${API_BASE_URL}/user`, userForm);
+      }
+      setUserForm({ name: '', email: '', password: '' });
+      fetchUsers();
+    } catch (err) {
+      setError('Error saving user');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteUser = (id) => {
-    fetch(`/user/${id}`, {
-      method: "DELETE",
-    }).then(() => {
-      const filteredUsers = users.filter((user) => user.id !== id);
-      setUsers(filteredUsers);
+  const handleUserEdit = (user) => {
+    setEditingUser(user);
+    setUserForm({
+      name: user.name,
+      email: user.email,
+      password: ''
     });
   };
 
-  const editUser = (user) => {
-    setEditingUser(user.id);
-    document.getElementById("name").value = user.name;
-    document.getElementById("email").value = user.email;
+  const handleUserDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this user?')) {
+      try {
+        setLoading(true);
+        await axios.delete(`${API_BASE_URL}/user/${id}`);
+        fetchUsers();
+      } catch (err) {
+        setError('Error deleting user');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
-  const cancelEditUser = () => {
-    setEditingUser(null);
-    document.getElementById("name").value = "";
-    document.getElementById("email").value = "";
-    document.getElementById("pass").value = "";
-  };
-
-  const addBlog = (event) => {
-    event.preventDefault();
-    const title = document.getElementById("title").value;
-    const content = document.getElementById("content").value;
-    const creator = document.getElementById("creator").value;
-
-    fetch("/blog", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ title, content, creator }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        setBlogs([
-          ...blogs,
-          {
-            title: title,
-            content: content,
-            creator: creator,
-          },
-        ]);
-        document.getElementById("title").value = "";
-        document.getElementById("content").value = "";
-        document.getElementById("creator").value = "";
-        setShowBlogForm(false);
-      });
-  };
-
-  const updateBlog = (id) => {
-    const title = document.getElementById("title1").value;
-    const content = document.getElementById("content1").value;
-    const creator = document.getElementById("creator1").value;
-    fetch(`/blog/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ title, content, creator }),
-    })
-      .then((response) => response.json())
-      .then((updatedBlog) => {
-        const updatedBlogs = blogs.map((blog) => {
-          if (blog.id === id) {
-            return updatedBlog;
-          }
-          return blog;
-        });
-        setBlogs(updatedBlogs);
+  // Blog CRUD operations
+  const handleBlogSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      if (editingBlog) {
+        await axios.put(`${API_BASE_URL}/blog/${editingBlog.id}`, blogForm);
         setEditingBlog(null);
-        cancelEditBlog();
-      });
+      } else {
+        await axios.post(`${API_BASE_URL}/blog`, blogForm);
+      }
+      setBlogForm({ title: '', content: '', creator: '' });
+      fetchBlogs();
+    } catch (err) {
+      setError('Error saving blog');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteBlog = (id) => {
-    fetch(`/blog/${id}`, {
-      method: "DELETE",
-    }).then(() => {
-      const filteredBlogs = blogs.filter((blog) => blog.id !== id);
-      setBlogs(filteredBlogs);
+  const handleBlogEdit = (blog) => {
+    setEditingBlog(blog);
+    setBlogForm({
+      title: blog.title,
+      content: blog.content,
+      creator: blog.creator
     });
   };
 
-  const editBlog = (blog) => {
-    setEditingBlog(blog.id);
-    document.getElementById("title").value = blog.title;
-    document.getElementById("content").value = blog.content;
-    document.getElementById("creator").value = blog.creator;
+  const handleBlogDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this blog?')) {
+      try {
+        setLoading(true);
+        await axios.delete(`${API_BASE_URL}/blog/${id}`);
+        fetchBlogs();
+      } catch (err) {
+        setError('Error deleting blog');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
-  const cancelEditBlog = () => {
+  const cancelEdit = () => {
+    setEditingUser(null);
     setEditingBlog(null);
-    document.getElementById("title").value = "";
-    document.getElementById("content").value = "";
-    document.getElementById("creator").value = "";
+    setUserForm({ name: '', email: '', password: '' });
+    setBlogForm({ title: '', content: '', creator: '' });
   };
 
   return (
     <div className="App">
-      <div className="main">
-        <h1 className="heads">Users</h1>
-        {showUserForm ? (
-          <form className="form" onSubmit={addUser}>
-            <input type="text" id="name" placeholder="Name" required />
-            <input type="email" id="email" placeholder="Email" required />
-            <input type="password" id="pass" placeholder="Password" required />
-            <input className="btn" type="submit" value="Add" />
-            <input
-              className="btn"
-              type="button"
-              onClick={() => setShowUserForm(false)}
-              value="Cancel"
-            />
-          </form>
-        ) : (
-          <button className="btn" onClick={() => setShowUserForm(true)}>
-            Add User
+      <div className="header">
+        <h1>DevOps Farm - Management System</h1>
+        <div className="tabs">
+          <button 
+            className={`tab ${activeTab === 'users' ? 'active' : ''}`}
+            onClick={() => setActiveTab('users')}
+          >
+            Users
           </button>
-        )}
-
-        {users.map((user) => (
-          <div className="content" key={user.id}>
-            {editingUser === user.id ? (
-              <form className="form">
-                <input type="text" id="name1" defaultValue={user.name} />
-                <input type="email" id="email1" defaultValue={user.email} />
-                <input
-                  type="password"
-                  id="pass1"
-                  defaultValue={user.password}
-                />
-                <input
-                  className="btn"
-                  onClick={() => updateUser(user.id)}
-                  type="button"
-                  value="Save"
-                />
-                <input
-                  className="btn"
-                  onClick={() => cancelEditUser()}
-                  type="button"
-                  value="Cancel"
-                />
-              </form>
-            ) : (
-              <>
-                <div>Name: {user.name}</div>
-                <div>Email: {user.email}</div>
-                <input
-                  className="btn"
-                  onClick={() => deleteUser(user.id)}
-                  type="button"
-                  value="Delete"
-                />
-                <input
-                  className="btn"
-                  onClick={() => editUser(user)}
-                  type="button"
-                  value="Update"
-                />
-              </>
-            )}
-          </div>
-        ))}
-      </div>
-      <div className="main">
-        <h1 className="heads">Blogs</h1>
-        {showBlogForm ? (
-          <form className="form" onSubmit={addBlog}>
-            <input type="text" id="title" placeholder="Title" required />
-            <input type="text" id="content" placeholder="Content" required />
-            <input type="text" id="creator" placeholder="Author" required />
-            <input className="btn" type="submit" value="Add" />
-            <input
-              onClick={() => setShowBlogForm(false)}
-              className="btn"
-              type="button"
-              value="Cancel"
-            />
-          </form>
-        ) : (
-          <button className="btn" onClick={() => setShowBlogForm(true)}>
-            Add Blog
+          <button 
+            className={`tab ${activeTab === 'blogs' ? 'active' : ''}`}
+            onClick={() => setActiveTab('blogs')}
+          >
+            Blogs
           </button>
-        )}
-
-        {blogs.map((blog) => (
-          <div className="content" key={blog.id}>
-            {editingBlog === blog.id ? (
-              <>
-                <input type="text" id="title1" defaultValue={blog.title} />
-                <input type="text" id="content1" defaultValue={blog.content} />
-                <input type="text" id="creator1" defaultValue={blog.creator} />
-                <input
-                  className="btn"
-                  onClick={() => updateBlog(blog.id)}
-                  type="button"
-                  value="Save"
-                />
-                <input
-                  className="btn"
-                  onClick={() => cancelEditBlog()}
-                  type="button"
-                  value="Cancel"
-                />
-              </>
-            ) : (
-              <>
-                <div>Title: {blog.title}</div>
-                <div>Content: {blog.content}</div>
-                <div>Author: {blog.creator}</div>
-                <input
-                  onClick={() => deleteBlog(blog.id)}
-                  className="btn"
-                  type="button"
-                  value="Delete"
-                />
-                <input
-                  onClick={() => editBlog(blog)}
-                  className="btn"
-                  type="button"
-                  value="Update"
-                />
-              </>
-            )}
-          </div>
-        ))}
+        </div>
       </div>
+
+      {error && <div className="error">{error}</div>}
+      {loading && <div className="loading">Loading...</div>}
+
+      {activeTab === 'users' && (
+        <div className="section">
+          <h2>User Management</h2>
+          
+          <form className="form" onSubmit={handleUserSubmit}>
+            <div className="form-group">
+              <input
+                type="text"
+                placeholder="Name"
+                value={userForm.name}
+                onChange={(e) => setUserForm({...userForm, name: e.target.value})}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <input
+                type="email"
+                placeholder="Email"
+                value={userForm.email}
+                onChange={(e) => setUserForm({...userForm, email: e.target.value})}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <input
+                type="password"
+                placeholder="Password"
+                value={userForm.password}
+                onChange={(e) => setUserForm({...userForm, password: e.target.value})}
+                required
+              />
+            </div>
+            <div className="form-actions">
+              <button type="submit" className="btn btn-primary" disabled={loading}>
+                {editingUser ? 'Update User' : 'Add User'}
+              </button>
+              {editingUser && (
+                <button type="button" className="btn btn-secondary" onClick={cancelEdit}>
+                  Cancel
+                </button>
+              )}
+            </div>
+          </form>
+
+          <div className="items-grid">
+            {users.map((user) => (
+              <div key={user.id} className="card">
+                <div className="card-content">
+                  <h3>{user.name}</h3>
+                  <p><strong>Email:</strong> {user.email}</p>
+                </div>
+                <div className="card-actions">
+                  <button 
+                    className="btn btn-edit" 
+                    onClick={() => handleUserEdit(user)}
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    className="btn btn-delete" 
+                    onClick={() => handleUserDelete(user.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'blogs' && (
+        <div className="section">
+          <h2>Blog Management</h2>
+          
+          <form className="form" onSubmit={handleBlogSubmit}>
+            <div className="form-group">
+              <input
+                type="text"
+                placeholder="Title"
+                value={blogForm.title}
+                onChange={(e) => setBlogForm({...blogForm, title: e.target.value})}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <textarea
+                placeholder="Content"
+                value={blogForm.content}
+                onChange={(e) => setBlogForm({...blogForm, content: e.target.value})}
+                rows="4"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <input
+                type="text"
+                placeholder="Author"
+                value={blogForm.creator}
+                onChange={(e) => setBlogForm({...blogForm, creator: e.target.value})}
+                required
+              />
+            </div>
+            <div className="form-actions">
+              <button type="submit" className="btn btn-primary" disabled={loading}>
+                {editingBlog ? 'Update Blog' : 'Add Blog'}
+              </button>
+              {editingBlog && (
+                <button type="button" className="btn btn-secondary" onClick={cancelEdit}>
+                  Cancel
+                </button>
+              )}
+            </div>
+          </form>
+
+          <div className="items-grid">
+            {blogs.map((blog) => (
+              <div key={blog.id} className="card">
+                <div className="card-content">
+                  <h3>{blog.title}</h3>
+                  <p className="blog-content">{blog.content}</p>
+                  <p><strong>Author:</strong> {blog.creator}</p>
+                </div>
+                <div className="card-actions">
+                  <button 
+                    className="btn btn-edit" 
+                    onClick={() => handleBlogEdit(blog)}
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    className="btn btn-delete" 
+                    onClick={() => handleBlogDelete(blog.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
 export default App;
