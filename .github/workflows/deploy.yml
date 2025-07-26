@@ -15,6 +15,17 @@ jobs:
     name: Run Tests
     runs-on: ubuntu-latest
     
+    services:
+      mongodb:
+        image: mongo:5.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd="mongosh --eval 'db.runCommand({ping: 1})'"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -28,11 +39,14 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install pytest-cov
         
     - name: Run tests with coverage
       run: |
         python -m pytest tests/ --cov=. --cov-report=xml --cov-fail-under=80
         echo "✅ Tests passed with 80%+ coverage"
+      env:
+        MONGODB_URL: ${{ secrets.MONGODB_URL }}
 
   deploy:
     name: Build and Deploy to AWS
