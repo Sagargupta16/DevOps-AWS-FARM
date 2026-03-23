@@ -1,13 +1,20 @@
 # Changelog
 
-## [1.2.0] - 2026-03-07
+## [1.3.0] - 2026-03-07
 
 - Fix security vulnerabilities via npm audit fix
 
-## [1.1.0] - 2026-02-28
+## [1.2.0] - 2026-02-28
 
 - Configure Renovate for monthly grouped updates
-- Update React to v19, test libraries, and AWS Actions
+- Update AWS Actions to v6, MongoDB to v8.2
+
+## [1.1.0] - 2025-07-26
+
+- Refactor code structure for improved readability and maintainability
+- Add MongoDB service to CI workflow with pytest-cov
+- Improve secrets handling in parser
+- Update MongoDB Docker tag to v8
 
 ## [1.0.0] - 2023-11-14
 
