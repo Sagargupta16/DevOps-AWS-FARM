@@ -62,3 +62,8 @@ venv/
 .pytest_cache/
 .coverage
 
+
+# Added for consistency
+.env.local
+.env.*.local
+.venv/
