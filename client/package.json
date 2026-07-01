@@ -9,12 +9,12 @@
     "axios": "^1.4.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-scripts": "^0.0.0",
+    "react-scripts": "5.0.1",
     "web-vitals": "^5.0.0"
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build && rmdir /s /q ..\\client_build 2>nul & move build ..\\client_build",
+    "build": "react-scripts build && node -e \"const fs=require('fs');fs.rmSync('../client_build',{recursive:true,force:true});fs.renameSync('build','../client_build')\"",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
