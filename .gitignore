@@ -67,3 +67,7 @@ venv/
 .env.local
 .env.*.local
 .venv/
+
+# Frontend build output
+client_build/
+client/node_modules/
