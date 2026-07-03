@@ -1,6 +1,6 @@
 # DevOps Farm - React Frontend
 
-A modern React frontend for the DevOps Farm management system built with Create React App.
+A modern React frontend for the DevOps Farm management system built with Vite.
 
 ## Features
 
@@ -13,16 +13,16 @@ A modern React frontend for the DevOps Farm management system built with Create 
 
 ## Technology Stack
 
-- **React 18** - Latest React with Concurrent Features
+- **React 19** - Latest React with Concurrent Features
 - **Axios** - HTTP client for API requests
 - **CSS3** - Modern styling with Flexbox and Grid
-- **Create React App** - Build tooling and development server
+- **Vite** - Build tooling and development server
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 16+ and npm
+- Node.js 20+ and npm
 - FastAPI backend running on port 8000
 
 ### Installation
@@ -45,7 +45,7 @@ The app will open at [http://localhost:3000](http://localhost:3000)
 npm run build
 ```
 
-This builds the app for production and moves it to `../client_build` folder, which is served by the FastAPI backend.
+This builds the app for production into the `../client_build` folder, which is served by the FastAPI backend.
 
 ## API Integration
 
@@ -69,14 +69,15 @@ The frontend connects to the FastAPI backend at:
 ```
 client/
 ├── public/
-│   ├── index.html
 │   ├── manifest.json
 │   └── robots.txt
 ├── src/
-│   ├── App.js          # Main application component
+│   ├── App.jsx         # Main application component
 │   ├── App.css         # Application styles
-│   ├── index.js        # React entry point
+│   ├── main.jsx        # React entry point
 │   └── index.css       # Global styles
+├── index.html          # Vite entry HTML
+├── vite.config.js      # Vite configuration
 ├── package.json        # Dependencies and scripts
 └── README.md          # This file
 ```
@@ -85,10 +86,9 @@ client/
 
 ### Available Scripts
 
-- `npm start` - Start development server
+- `npm start` (or `npm run dev`) - Start development server
 - `npm run build` - Build for production
-- `npm test` - Run tests
-- `npm run eject` - Eject from Create React App
+- `npm run preview` - Preview the production build locally
 
 ### Code Style
 
@@ -113,27 +113,3 @@ The frontend is automatically built and served by the FastAPI backend in product
 2. Test locally with `npm start`
 3. Build with `npm run build`
 4. Commit and push - GitHub Actions handles deployment
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)

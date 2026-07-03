@@ -1,6 +1,14 @@
+FROM node:22-alpine AS frontend
+WORKDIR /client
+COPY client/package.json client/package-lock.json ./
+RUN npm ci
+COPY client/ ./
+RUN npm run build
+
 FROM python:3.14-alpine
 WORKDIR /app
 COPY . /app/
+COPY --from=frontend /client_build /app/client_build
 RUN apk add --no-cache gcc musl-dev python3-dev && \
     pip install --upgrade pip && \
     pip install cython && \
