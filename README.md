@@ -2,9 +2,11 @@
 
 A full-stack web application built with FastAPI, React, and MongoDB, containerized with Docker and deployed on AWS.
 
-## 🚀 Quick Start
+> Note: This is a sample/reference project — it is not actively deployed. The AWS ECR/ECS deployment workflows are kept for reference and only run manually.
 
-**⚠️ IMPORTANT: Before running the application, you MUST configure your database connection:**
+## Quick Start
+
+**IMPORTANT: Before running the application, you MUST configure your database connection:**
 
 ```bash
 # 1. Copy the secrets template
@@ -141,7 +143,7 @@ DevOps-AWS-FARM is a modern full-stack web application that demonstrates DevOps 
 Before running this application, make sure you have the following installed:
 
 - **Python 3.11+**
-- **Node.js 16+** and **npm**
+- **Node.js 20+** and **npm**
 - **MongoDB** (local or cloud instance)
 - **Docker** and **Docker Compose** (for containerized setup)
 - **Git**
@@ -175,7 +177,7 @@ pip install -r requirements.txt
 
 **Configure MongoDB Connection (IMPORTANT):**
 
-⚠️ **Before running the application, you MUST configure your MongoDB connection:**
+**Before running the application, you MUST configure your MongoDB connection:**
 
 1. **Copy the secrets template:**
    ```bash
@@ -200,7 +202,7 @@ pip install -r requirements.txt
    - Click "Connect" on your cluster and choose "Connect your application"
    - Copy the connection string and update the values in `secrets.yml`
 
-📝 **Note:** The `secrets.yml` file is ignored by git for security. Never commit database credentials to version control.
+**Note:** The `secrets.yml` file is ignored by git for security. Never commit database credentials to version control.
 
 #### 3. Frontend Setup
 
@@ -219,7 +221,7 @@ This will create the `client_build` directory that the FastAPI server serves.
 
 ### Docker Setup
 
-**⚠️ IMPORTANT: Configure secrets before running Docker!**
+**IMPORTANT: Configure secrets before running Docker!**
 
 Before using Docker, make sure to configure your MongoDB connection:
 
@@ -388,7 +390,7 @@ DevOps-AWS-FARM/
 │   ├── src/               # React source code
 │   ├── public/            # Static assets
 │   └── package.json       # Node.js dependencies
-├── client_build/          # Built React app (served by FastAPI)
+├── client_build/          # Built React app (generated, gitignored)
 ├── config/                # Configuration files
 │   ├── secrets.yml.example # Template for MongoDB credentials
 │   ├── secrets.yml        # Your actual MongoDB credentials (git-ignored)
@@ -425,7 +427,7 @@ DevOps-AWS-FARM/
 
 ### Frontend
 - **React 19**: JavaScript library for building user interfaces
-- **React Scripts**: Build tools and development server
+- **Vite**: Build tools and development server
 
 ### Testing & Quality
 - **Pytest**: Testing framework
