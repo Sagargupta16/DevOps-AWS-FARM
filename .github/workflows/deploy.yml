@@ -1,8 +1,8 @@
 name: Deploy to AWS ECS
 
+# Sample/reference pipeline: run manually only (no live AWS deployment is maintained)
 on:
-  push:
-    branches: [ main, master ]
+  workflow_dispatch:
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -44,7 +44,7 @@ jobs:
     - name: Run tests with coverage
       run: |
         python -m pytest tests/ --cov=. --cov-report=xml --cov-fail-under=80
-        echo "✅ Tests passed with 80%+ coverage"
+        echo "Tests passed with 80%+ coverage"
       env:
         MONGODB_URL: ${{ secrets.MONGODB_URL }}
 
@@ -96,6 +96,6 @@ jobs:
         aws ecs wait services-stable --cluster $ECS_CLUSTER --services $ECS_SERVICE
         
         # Verify deployment
-        echo "✅ Deployment completed successfully!"
+        echo "Deployment completed successfully!"
         aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE \
           --query 'services[0].{Status:status,RunningCount:runningCount,DesiredCount:desiredCount}'

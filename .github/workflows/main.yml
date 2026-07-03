@@ -1,15 +1,7 @@
 name: Build, Test, and Publish Docker Image to Amazon ECR
 
+# Sample/reference pipeline: run manually only (no live AWS deployment is maintained)
 on:
-  # use Push if you want to trigger the workflow on every push to the repository in the main branch
-  push:
-    branches:
-      - main
-  # use Pull Request if you want to trigger the workflow on every pull request to the repository in the main branch
-  pull_request:
-    branches:
-      - main
-  # use workflow_dispatch if you want to trigger the workflow manually
   workflow_dispatch:
 
 env:
