@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.3.1] - 2026-09-02
+
+- Bump postcss to 8.5.26 in client to fix source map path traversal advisories (GHSA high + medium)
+
 ## [1.3.0] - 2026-03-07
 
 - Fix security vulnerabilities via npm audit fix
