@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.3.2] - 2026-09-02
+
+- Bump browserslist to 4.28.8 in client to fix Dependabot alert #87 (GHSA high, <= 4.28.6)
+
 ## [1.3.1] - 2026-09-02
 
 - Bump postcss to 8.5.26 in client to fix source map path traversal advisories (GHSA high + medium)
