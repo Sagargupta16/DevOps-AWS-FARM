@@ -322,6 +322,14 @@ The application automatically deploys to AWS when code is pushed to the main bra
 
 **Docker Image → ECR → ECS**
 
+#### CI/CD Demo Mode
+
+The pipelines in this repo run in demo mode — they showcase the full CI/CD flow without touching live AWS:
+
+- Deploy/publish jobs are skipped behind the `DEPLOY_ENABLED` repository variable, and the real ECR/ECS calls are commented out in the workflow files (kept visible for reference).
+- Quality gates (pytest coverage, ESLint, stylelint, SonarQube) still run but are non-blocking, so the pipelines always pass.
+- To activate real deployments: set the repository variable `DEPLOY_ENABLED=true`, add the secrets listed under [Required GitHub Secrets](#required-github-secrets), and uncomment the AWS steps in `deploy.yml` / `main.yml`.
+
 #### GitHub Actions Workflow
 
 The `.github/workflows/deploy.yml` file contains the deployment pipeline:

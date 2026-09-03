@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.3] - 2026-09-03
+
+- Convert CI/CD pipelines to always-pass demo mode: deploy/publish jobs skipped behind DEPLOY_ENABLED repo variable, real AWS/ECR/ECS calls commented out for showcase
+- Make quality gates non-blocking (pytest coverage, ESLint, stylelint, frontend tests, SonarQube)
+- Replace missing G_TOKEN secret with default github.token; re-enable deploy.yml and main.yml workflows
+
 ## [1.3.2] - 2026-09-02
 
 - Bump browserslist to 4.28.8 in client to fix Dependabot alert #87 (GHSA high, <= 4.28.6)
