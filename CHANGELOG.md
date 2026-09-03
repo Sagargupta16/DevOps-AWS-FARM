@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.4] - 2026-09-03
+
+### Changed
+
+- Re-enabled Renovate via the shared preset: one grouped dependency PR in the first week of each month, immediate auto-merged security fixes.
+
 ## [1.3.3] - 2026-09-03
 
 - Convert CI/CD pipelines to always-pass demo mode: deploy/publish jobs skipped behind DEPLOY_ENABLED repo variable, real AWS/ECR/ECS calls commented out for showcase
