@@ -1,1 +1,1 @@
-{ "enabled": false }
+{"$schema":"https://docs.renovatebot.com/renovate-schema.json","extends":["github>Sagargupta16/shared-workflows"]}
