@@ -3,7 +3,7 @@
 [![CI](https://github.com/Sagargupta16/DevOps-AWS-FARM/actions/workflows/ci.yml/badge.svg)](https://github.com/Sagargupta16/DevOps-AWS-FARM/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A FARM-stack app (FastAPI, React 19, MongoDB) packaged as a single Docker image and shipped by GitHub Actions: lint and test on every push, image to Amazon ECR, rolling deploy to Amazon ECS.
+A FARM-stack app (FastAPI, React 19, MongoDB) packaged as a single Docker image, with GitHub Actions pipelines: lint, test and build on every push and pull request, plus a manually dispatched pipeline that pushes the image to Amazon ECR and rolls an Amazon ECS service (off by default, see demo mode below).
 
 > Note: This is a sample/reference project. It is not actively deployed. `ci.yml` runs on every push and pull request; the two AWS pipelines run manually and in demo mode (see [CI/CD demo mode](#cicd-demo-mode)).
 
@@ -42,7 +42,7 @@ MONGODB_URL="mongodb+srv://<user>:<password>@<cluster>.mongodb.net/blogging" doc
 
 ## Overview
 
-DevOps-AWS-FARM is a small user and blog CRUD app whose real subject is the delivery pipeline around it. The React client is built by Vite and served by FastAPI from the same container, so one image covers the whole app and one ECS service runs it. The pipelines show the full path from a push to a stable ECS service: quality gates, a MongoDB service container for integration tests, image build, ECR push and an ECS rolling deploy that waits for `services-stable`.
+DevOps-AWS-FARM is a small user and blog CRUD app whose real subject is the delivery pipeline around it. The React client is built by Vite and served by FastAPI from the same container, so one image covers the whole app and one ECS service runs it. Every push runs `ci.yml` (lint, tests, client build). The manually dispatched AWS pipelines lay out the rest of the path to a stable ECS service: quality gates, a MongoDB service container for integration tests, image build, ECR push and an ECS rolling deploy that waits for `services-stable`.
 
 ## Features
 
@@ -83,15 +83,16 @@ The MongoDB connection is resolved in this order: the `MONGODB_URL` environment 
 
 ```mermaid
 flowchart LR
-    dev["git push"] --> gha["GitHub Actions"]
-    gha -->|"pytest + MongoDB service"| gate{"tests pass?"}
-    gate -->|"no"| stop["stop"]
-    gate -->|"yes"| build["docker build"]
+    dev["manual run (workflow_dispatch)"] --> test["test job: pytest + MongoDB service"]
+    test --> flag{"DEPLOY_ENABLED = true?"}
+    flag -->|"no (default)"| demo["demo job: deploy skipped"]
+    flag -->|"yes"| build["docker build"]
     build -->|"tag :sha and :latest"| ecr[("Amazon ECR")]
-    ecr --> ecs["Amazon ECS service"]
-    gha -->|"update-service --force-new-deployment"| ecs
+    ecr -->|"update-service --force-new-deployment"| ecs["Amazon ECS service"]
     ecs -->|"wait services-stable"| live["new tasks running"]
 ```
+
+This is `deploy.yml`. It never runs on push, and the ECR and ECS steps stay commented out until you enable them (see [CI/CD demo mode](#cicd-demo-mode)).
 
 ## CI/CD Pipelines
 
@@ -117,7 +118,7 @@ The two AWS pipelines run in demo mode. They show the full flow without touching
 - **Secrets stay out of git and the image.** `config/secrets.yml` is listed in both `.gitignore` and `.dockerignore`. In containers the connection string comes from `MONGODB_URL` (an ECS task-definition secret or environment variable in AWS), and the app logs only the MongoDB host.
 - **bcrypt called directly.** passlib is unmaintained and fails on bcrypt 5, so the app hashes with `bcrypt` itself. Passwords longer than 72 bytes, which bcrypt cannot hash, are rejected with a 422.
 - **Integration tests against a real database.** The tests call the route functions against a MongoDB service container rather than mocks, so the Mongo queries themselves are exercised.
-- **Gated deploys.** In `deploy.yml` the deploy job `needs` the test job, and the ECS step waits for `services-stable` before the run is green.
+- **Gated deploys.** In `deploy.yml` the deploy job `needs` the test job and only runs when `DEPLOY_ENABLED` is `true`, and the ECS step waits for `services-stable` before the run is green. In demo mode the test step is `continue-on-error`, so remove that line too when you turn deploys on.
 - **Dependency updates.** Renovate (shared preset) groups updates into monthly PRs (minor/patch and major kept separate) that auto-merge on green CI; security fixes skip the schedule.
 
 ## Getting Started
