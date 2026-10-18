@@ -12,6 +12,7 @@ export default defineConfig({
     proxy: {
       '/user': 'http://localhost:8000',
       '/blog': 'http://localhost:8000',
+      '/health': 'http://localhost:8000',
     },
   },
 });
