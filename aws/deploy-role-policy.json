@@ -1,0 +1,57 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "EcrLogin",
+      "Effect": "Allow",
+      "Action": "ecr:GetAuthorizationToken",
+      "Resource": "*"
+    },
+    {
+      "Sid": "EcrPushThisRepositoryOnly",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:CompleteLayerUpload",
+        "ecr:DescribeImages",
+        "ecr:InitiateLayerUpload",
+        "ecr:PutImage",
+        "ecr:UploadLayerPart"
+      ],
+      "Resource": "arn:aws:ecr:<REGION>:<ACCOUNT_ID>:repository/devops-aws-farm"
+    },
+    {
+      "Sid": "TaskDefinitionsHaveNoResourceLevelPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:DescribeTaskDefinition",
+        "ecs:RegisterTaskDefinition"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "RollOutThisServiceOnly",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:DescribeServices",
+        "ecs:UpdateService"
+      ],
+      "Resource": "arn:aws:ecs:<REGION>:<ACCOUNT_ID>:service/devops-aws-farm/devops-aws-farm"
+    },
+    {
+      "Sid": "HandTheTaskRolesToEcsOnly",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": [
+        "arn:aws:iam::<ACCOUNT_ID>:role/devops-aws-farm-task-execution",
+        "arn:aws:iam::<ACCOUNT_ID>:role/devops-aws-farm-task"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "ecs-tasks.amazonaws.com"
+        }
+      }
+    }
+  ]
+}
