@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.5.0] - 2026-10-18
+
+### Added
+
+- `GET /health`: pings MongoDB with a 2 second timeout and returns 200 `{"status": "ok", "database": "up"}` or 503 `{"status": "unavailable", "database": "down"}`. Used by the Docker `HEALTHCHECK`, the ECS task definition template and the ALB target group
+- Structured logs: `LOG_FORMAT=json` (the image default) writes one JSON object per line, and a middleware logs method, path, status and `duration_ms` for every request
+- Email is unique: a unique index created at startup plus a pre-check return 409 on create, and on update when the email belongs to another user
+- `scripts/seed.py` loads demo users and posts through the API (standard library only, idempotent)
+- README screenshots at desktop (1440x900) and phone (390x844) widths, captured by `client/scripts/screenshots.mjs` (Playwright, `npm run screenshots`)
+- `aws/`: GitHub OIDC trust policy, least-privilege deploy role policy, Fargate task definition template and a setup and teardown guide
+
+### Changed
+
+- `deploy.yml` deploys for real when `DEPLOY_ENABLED=true`: GitHub OIDC instead of AWS access keys, a `production` environment, the image tagged with the commit SHA (reused on re-runs), the task definition rendered from its family, `amazon-ecs-deploy-task-definition` waiting for stability, and a `/health` smoke test. The four AWS actions are pinned to commit SHAs. Its configuration moved from secrets to repo variables (`AWS_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_CLUSTER`, `ECS_SERVICE`, `ECS_TASK_FAMILY`, `ECS_CONTAINER_NAME`, `APP_URL`)
+- `deploy.yml` tests are blocking again and run against the MongoDB service container instead of `secrets.MONGODB_URL`
+- `main.yml`: the commented AWS credentials step uses OIDC (`role-to-assume`) instead of access keys
+- Both Dockerfiles, `deploy.yml` and `main.yml` install `requirements.lock.txt` with `--require-hashes --only-binary :all:`; npm installs in CI and the image use `npm ci --ignore-scripts`
+- Images are based on `python:3.14-slim` instead of alpine (pymongo publishes no musllinux wheel, so alpine compiled it with gcc) and the app runs as a non-root user
+- One cached `MongoClient` per process instead of a new client per `get_database()` call
+- The app starts without `client_build/` and serves the API only, with a warning
+- Tests rewritten: 31 HTTP-level tests through FastAPI's `TestClient` with `pytest.raises`, cleaning up only the documents they created. The old suite passed even when nothing raised, and one test deleted every user named `test`
+- Vite dev proxy forwards `/health`
+
 ## [1.4.0] - 2026-10-18
 
 ### Fixed
