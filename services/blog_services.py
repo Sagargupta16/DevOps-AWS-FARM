@@ -10,7 +10,7 @@ blogs_collection = get_blogs_collection()
 
 def create_blog(blog: BlogIn, db: MongoClient = Depends(get_database)):
     logger.info("Creating blog")
-    blog = blog.dict()
+    blog = blog.model_dump()
     blog["id"] = str(ObjectId())
     blogs_collection.insert_one(blog)
     return {
@@ -22,10 +22,7 @@ def create_blog(blog: BlogIn, db: MongoClient = Depends(get_database)):
 def get_blogs(db: MongoClient = Depends(get_database)):
     logger.info("Getting All blogs")
     blogs = blogs_collection.find()
-    blogs = list(blogs)
-    if blogs:
-        return blogs
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return list(blogs)
 
 
 def get_blog(blog_id: str, db: MongoClient = Depends(get_database)):
@@ -47,7 +44,7 @@ def delete_blog(blog_id: str, db: MongoClient = Depends(get_database)):
 
 def update_blog(blog_id: str, blog: BlogIn, db: MongoClient = Depends(get_database)):
     logger.info("Updating blog")
-    blog = blog.dict()
+    blog = blog.model_dump()
     blog = blogs_collection.find_one_and_update(
         {"id": blog_id}, {"$set": blog}, return_document=True
     )

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class Blog(BaseModel):
@@ -9,19 +9,17 @@ class Blog(BaseModel):
 
 
 class BlogIn(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     title: str
     content: str
     creator: str
 
-    class Config:
-        orm_mode = True
-
 
 class BlogOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     title: str
     content: str
     creator: str
-
-    class Config:
-        orm_mode = True

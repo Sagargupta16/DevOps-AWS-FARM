@@ -1,8 +1,7 @@
-from passlib.context import CryptContext
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt
 
 
 class Hash:
-    def bcrypt(self):
-        return pwd_context.hash(self)
+    @staticmethod
+    def bcrypt(password: str) -> str:
+        return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")

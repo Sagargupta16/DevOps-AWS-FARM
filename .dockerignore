@@ -2,4 +2,13 @@ node_modules
 .git
 .env
 dist
+# never bake local credentials or build output into the image
+config/secrets.yml
+.env.*
+.venv
+venv
+client/node_modules
+client_build
+*.log
+.coverage
 # v1

@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
 
-const API_BASE_URL = import.meta.env.PROD ? '' : 'http://localhost:8000';
+// Same-origin in production; in dev the Vite proxy (vite.config.js) forwards /user and /blog to :8000,
+// so no CORS setup is needed on the API
+const API_BASE_URL = '';
 
 function App() {
   const [users, setUsers] = useState([]);
@@ -35,6 +37,7 @@ function App() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      setError('');
       const response = await axios.get(`${API_BASE_URL}/user`);
       setUsers(response.data);
     } catch (err) {
@@ -48,6 +51,7 @@ function App() {
   const fetchBlogs = async () => {
     try {
       setLoading(true);
+      setError('');
       const response = await axios.get(`${API_BASE_URL}/blog`);
       setBlogs(response.data);
     } catch (err) {

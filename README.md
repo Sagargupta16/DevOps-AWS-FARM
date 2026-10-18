@@ -1,164 +1,149 @@
 # DevOps-AWS-FARM
 
-A full-stack web application built with FastAPI, React, and MongoDB, containerized with Docker and deployed on AWS.
+[![CI](https://github.com/Sagargupta16/DevOps-AWS-FARM/actions/workflows/ci.yml/badge.svg)](https://github.com/Sagargupta16/DevOps-AWS-FARM/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> Note: This is a sample/reference project — it is not actively deployed. The AWS ECR/ECS deployment workflows are kept for reference and only run manually.
+A FARM-stack app (FastAPI, React 19, MongoDB) packaged as a single Docker image, with GitHub Actions pipelines: lint, test and build on every push and pull request, plus a manually dispatched pipeline that pushes the image to Amazon ECR and rolls an Amazon ECS service (off by default, see demo mode below).
+
+> Note: This is a sample/reference project. It is not actively deployed. `ci.yml` runs on every push and pull request; the two AWS pipelines run manually and in demo mode (see [CI/CD demo mode](#cicd-demo-mode)).
 
 ## Quick Start
 
-**IMPORTANT: Before running the application, you MUST configure your database connection:**
+One command, no cloud account needed:
 
 ```bash
-# 1. Copy the secrets template
-cp config/secrets.yml.example config/secrets.yml
-
-# 2. Edit config/secrets.yml with your MongoDB Atlas credentials
-# 3. Then run the application
-docker-compose up --build
+git clone https://github.com/Sagargupta16/DevOps-AWS-FARM.git
+cd DevOps-AWS-FARM
+docker compose up --build
 ```
 
-For detailed setup instructions, see [Getting Started](#getting-started) below.
+This starts MongoDB 8.2, runs the test suite against it with an 80% coverage gate, and starts the app on `http://localhost:8000` only after the tests pass. To use MongoDB Atlas instead, pass the connection string:
+
+```bash
+MONGODB_URL="mongodb+srv://<user>:<password>@<cluster>.mongodb.net/blogging" docker compose up --build
+```
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
 - [Architecture](#architecture)
+- [CI/CD Pipelines](#cicd-pipelines)
+- [Tech Decisions](#tech-decisions)
 - [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Local Development Setup](#local-development-setup)
-  - [Docker Setup](#docker-setup)
 - [Running the Application](#running-the-application)
-  - [Development Mode](#development-mode)
-  - [Production Mode with Docker](#production-mode-with-docker)
 - [Testing](#testing)
 - [API Documentation](#api-documentation)
 - [Deployment](#deployment)
 - [Project Structure](#project-structure)
 - [Technologies](#technologies)
 - [Contributing](#contributing)
+- [Troubleshooting](#troubleshooting)
 
 ## Overview
 
-DevOps-AWS-FARM is a modern full-stack web application that demonstrates DevOps best practices using the FARM stack (FastAPI, React, MongoDB). The application includes user and blog management features with a complete CI/CD pipeline for AWS deployment.
+DevOps-AWS-FARM is a small user and blog CRUD app whose real subject is the delivery pipeline around it. The React client is built by Vite and served by FastAPI from the same container, so one image covers the whole app and one ECS service runs it. Every push runs `ci.yml` (lint, tests, client build). The manually dispatched AWS pipelines lay out the rest of the path to a stable ECS service: quality gates, a MongoDB service container for integration tests, image build, ECR push and an ECS rolling deploy that waits for `services-stable`.
 
 ## Features
 
-- **FastAPI Backend**: High-performance Python web framework with automatic API documentation
-- **React Frontend**: Modern React-based user interface
-- **MongoDB Integration**: NoSQL database for data persistence
-- **User Management**: User registration, authentication, and profile management
-- **Blog System**: Create, read, update, and delete blog posts
-- **Docker Support**: Containerized application for consistent deployment
-- **Test Coverage**: Comprehensive test suite with coverage reporting
-- **Code Quality**: Linting and formatting tools (Pylint, Flake8, Prettier)
-- **CI/CD Ready**: Docker Compose setup for easy deployment
+- **FastAPI backend**: user and blog CRUD with automatic OpenAPI docs at `/docs`
+- **React 19 frontend**: tabbed user and blog management UI, responsive down to phone widths
+- **MongoDB**: document storage through PyMongo, MongoDB 8.2 in Docker or MongoDB Atlas
+- **Password hashing**: bcrypt; password hashes are never returned by the API
+- **Docker**: multi-stage image (Node builds the client, Python serves API and client)
+- **Docker Compose**: MongoDB, a test container with a coverage gate, then the app
+- **Tests**: pytest suite run against a real MongoDB, 80% coverage gate in CI
+- **Code quality**: flake8 in CI; black, ESLint, stylelint, Prettier and SonarQube in the full pipeline
+- **CI/CD**: GitHub Actions workflows for lint, test, build, ECR publish and ECS deploy
 
 ## Architecture
 
-### Application Architecture
+### Application
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   React Client  │───▶│  FastAPI Server │───▶│   MongoDB Atlas │
-│   (Frontend)    │    │   (Backend)     │    │   (Database)    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
-
-### AWS Deployment Flow
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   GitHub Repo   │───▶│   Amazon ECR    │───▶│   Amazon ECS    │
-│  (Source Code)  │    │ (Docker Images) │    │  (Containers)   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       ▲                       │
-         │                       │                       │
-         ▼                       │                       ▼
-┌─────────────────┐              │              ┌─────────────────┐
-│ GitHub Actions  │──────────────┘              │ Application     │
-│    (CI/CD)      │                             │ Load Balancer   │
-└─────────────────┘                             └─────────────────┘
+```mermaid
+flowchart LR
+    browser["Browser"] -->|"GET / (static React build)"| app
+    browser -->|"JSON: /user, /blog"| app
+    subgraph image["Docker image (python:3.14-alpine)"]
+        app["FastAPI + Uvicorn :8000"]
+        routes["routes/ (HTTP, response models)"]
+        services["services/ (Mongo queries, bcrypt)"]
+        models["models/ (Pydantic v2 validation)"]
+        static["client_build/ (Vite output)"]
+        app --> routes --> services
+        routes -.-> models
+        app --> static
+    end
+    services --> mongo[("MongoDB 8.2 or Atlas")]
 ```
 
-### CI/CD Workflow Diagram
+The MongoDB connection is resolved in this order: the `MONGODB_URL` environment variable, then `config/secrets.yml`, then `mongodb://localhost:27017/blogging`.
 
-```
-┌─────────────┐
-│ Developer   │
-│ Push Code   │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│   GitHub    │
-│ Repository  │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   GitHub    │───▶│  Run Tests  │───▶│    Build    │
-│   Actions   │    │  Coverage   │    │   Docker    │
-│  Triggered  │    │    80%+     │    │    Image    │
-└─────────────┘    └──────┬──────┘    └──────┬──────┘
-                          │                  │
-                          ▼                  ▼
-                 ┌─────────────┐    ┌─────────────┐
-                 │    Tests    │    │    Push     │
-                 │   Failed?   │    │   to ECR    │
-                 │    Stop     │    │             │
-                 └─────────────┘    └──────┬──────┘
-                                           │
-                                           ▼
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Health    │◀───│   Deploy    │◀───│   Update    │
-│   Check     │    │   to ECS    │    │ ECS Service │
-│             │    │             │    │             │
-└─────────────┘    └─────────────┘    └─────────────┘
-       │
-       ▼
-┌─────────────┐
-│ Application │
-│    Live     │
-│             │
-└─────────────┘
+### AWS deployment
+
+```mermaid
+flowchart LR
+    dev["manual run (workflow_dispatch)"] --> test["test job: pytest + MongoDB service"]
+    test --> flag{"DEPLOY_ENABLED = true?"}
+    flag -->|"no (default)"| demo["demo job: deploy skipped"]
+    flag -->|"yes"| build["docker build"]
+    build -->|"tag :sha and :latest"| ecr[("Amazon ECR")]
+    ecr -->|"update-service --force-new-deployment"| ecs["Amazon ECS service"]
+    ecs -->|"wait services-stable"| live["new tasks running"]
 ```
 
-### CI/CD Process Steps
+This is `deploy.yml`. It never runs on push, and the ECR and ECS steps stay commented out until you enable them (see [CI/CD demo mode](#cicd-demo-mode)).
 
-1. **Code Push**: Developer pushes code to GitHub repository
-2. **GitHub Actions Trigger**: Workflow automatically starts on push to main branch
-3. **Run Tests**: Execute pytest with 80% coverage requirement
-4. **Test Gate**: If tests fail, deployment stops here
-5. **Build Docker Image**: Creates containerized version of the application (only if tests pass)
-6. **Push to ECR**: Uploads Docker image to Amazon Elastic Container Registry
-7. **Deploy to ECS**: Updates ECS service with new Docker image
-8. **Health Check**: Verifies application is running correctly
-9. **Go Live**: Application is accessible to users
+## CI/CD Pipelines
+
+| Workflow | Trigger | What it does | Blocking |
+| --- | --- | --- | --- |
+| [`ci.yml`](.github/workflows/ci.yml) | push and PR to `main`, manual | flake8; pytest against a MongoDB 8.2 service container with `--cov-fail-under=80`; Vite production build | yes |
+| [`deploy.yml`](.github/workflows/deploy.yml) | manual | pytest with MongoDB, then docker build, ECR push, `aws ecs update-service` and `aws ecs wait services-stable` | tests non-blocking, deploy gated by `DEPLOY_ENABLED` |
+| [`main.yml`](.github/workflows/main.yml) | manual | black check (opens an auto-format PR when enabled), flake8, ESLint, stylelint, Prettier, coverage report, SonarQube scan, then a versioned ECR publish and ECS task-definition deploy | quality steps non-blocking, publish gated by `DEPLOY_ENABLED` |
+
+### CI/CD demo mode
+
+The two AWS pipelines run in demo mode. They show the full flow without touching a live AWS account:
+
+- Deploy and publish jobs are skipped unless the repository variable `DEPLOY_ENABLED` is `true`, and the real ECR/ECS steps are commented out in the workflow files (kept visible for reference).
+- Their quality gates (pytest coverage, ESLint, stylelint, SonarQube) still run but are non-blocking.
+- `ci.yml` is not in demo mode: its lint, test and build jobs must pass.
+- To deploy for real: set `DEPLOY_ENABLED=true`, add the secrets listed under [Required GitHub Secrets](#required-github-secrets), and uncomment the AWS steps in `deploy.yml` or `main.yml`.
+
+## Tech Decisions
+
+- **One image for API and client.** The Dockerfile builds the React app in a `node:22-alpine` stage and copies the output into the Python image, where FastAPI serves it at `/`. One ECS service, one origin, no CORS setup.
+- **Same-origin in development too.** The Vite dev server proxies `/user` and `/blog` to `localhost:8000`, so the client never calls the API cross-origin.
+- **Secrets stay out of git and the image.** `config/secrets.yml` is listed in both `.gitignore` and `.dockerignore`. In containers the connection string comes from `MONGODB_URL` (an ECS task-definition secret or environment variable in AWS), and the app logs only the MongoDB host.
+- **bcrypt called directly.** passlib is unmaintained and fails on bcrypt 5, so the app hashes with `bcrypt` itself. Passwords longer than 72 bytes, which bcrypt cannot hash, are rejected with a 422.
+- **Integration tests against a real database.** The tests call the route functions against a MongoDB service container rather than mocks, so the Mongo queries themselves are exercised.
+- **Gated deploys.** In `deploy.yml` the deploy job `needs` the test job and only runs when `DEPLOY_ENABLED` is `true`, and the ECS step waits for `services-stable` before the run is green. In demo mode the test step is `continue-on-error`, so remove that line too when you turn deploys on.
+- **Dependency updates.** Renovate (shared preset) groups updates into monthly PRs (minor/patch and major kept separate) that auto-merge on green CI; security fixes skip the schedule.
 
 ## Getting Started
 
 ### Prerequisites
 
-Before running this application, make sure you have the following installed:
-
 - **Python 3.11+**
-- **Node.js 20+** and **npm**
-- **MongoDB** (local or cloud instance)
-- **Docker** and **Docker Compose** (for containerized setup)
+- **Node.js 20.19+ or 22.12+** and **npm** (Vite 8 requirement)
+- **MongoDB** (local, Docker or Atlas)
+- **Docker** with **Docker Compose** (for the containerized setup)
 - **Git**
 
 ### Local Development Setup
 
-#### 1. Clone the Repository
+#### 1. Clone the repository
+
 ```bash
 git clone https://github.com/Sagargupta16/DevOps-AWS-FARM.git
 cd DevOps-AWS-FARM
 ```
 
-#### 2. Backend Setup
+#### 2. Backend setup
 
-**Create and activate Python virtual environment:**
+Create and activate a virtual environment:
+
 ```bash
 # Windows
 python -m venv venv
@@ -169,22 +154,23 @@ python -m venv venv
 source venv/bin/activate
 ```
 
-**Install Python dependencies:**
+Install the Python dependencies:
+
 ```bash
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-**Configure MongoDB Connection (IMPORTANT):**
+#### 3. Configure MongoDB
 
-**Before running the application, you MUST configure your MongoDB connection:**
+Either export `MONGODB_URL`, or use the secrets file:
 
-1. **Copy the secrets template:**
+1. Copy the secrets template:
    ```bash
    cp config/secrets.yml.example config/secrets.yml
    ```
 
-2. **Update `config/secrets.yml` with your MongoDB Atlas credentials:**
+2. Update `config/secrets.yml` with your MongoDB Atlas credentials:
    ```yaml
    mongodb:
      host: your-cluster.mongodb.net
@@ -194,196 +180,163 @@ pip install -r requirements.txt
      database: mongodb+srv://your-username:your-password@your-cluster.mongodb.net/your-database-name
    ```
 
-3. **Get MongoDB Atlas credentials:**
+3. Get MongoDB Atlas credentials:
    - Go to [MongoDB Atlas](https://cloud.mongodb.com/)
-   - Create a cluster or use existing one
+   - Create a cluster or use an existing one
    - Go to Database Access and create a database user
-   - Go to Network Access and whitelist your IP (or 0.0.0.0/0 for development)
+   - Go to Network Access and allow your IP (or 0.0.0.0/0 for development)
    - Click "Connect" on your cluster and choose "Connect your application"
    - Copy the connection string and update the values in `secrets.yml`
 
-**Note:** The `secrets.yml` file is ignored by git for security. Never commit database credentials to version control.
+With neither set, the app falls back to `mongodb://localhost:27017/blogging`.
 
-#### 3. Frontend Setup
+**Note:** `config/secrets.yml` is ignored by git and excluded from the Docker build context. Never commit database credentials.
 
-**Navigate to client directory and install dependencies:**
+#### 4. Frontend setup
+
 ```bash
 cd client
 npm install
-```
-
-**Build the React application:**
-```bash
 npm run build
 ```
 
-This will create the `client_build` directory that the FastAPI server serves.
-
-### Docker Setup
-
-**IMPORTANT: Configure secrets before running Docker!**
-
-Before using Docker, make sure to configure your MongoDB connection:
-
-```bash
-# Copy the secrets template
-cp config/secrets.yml.example config/secrets.yml
-# Edit config/secrets.yml with your MongoDB Atlas credentials
-```
-
-For a quick setup using Docker:
-
-```bash
-# Build and run with Docker Compose
-docker-compose up --build
-```
-
-This will:
-- Build the application image
-- Run tests with coverage requirements (80%+)
-- Start the application on port 8000
+This writes the production bundle to `../client_build`, which the FastAPI server serves. The server will not start without it.
 
 ## Running the Application
 
-### Development Mode
+### Development mode
 
-#### Option 1: Using VS Code Task (Recommended)
-If you're using VS Code, you can use the built-in task:
-1. Press `Ctrl+Shift+P` (Windows) or `Cmd+Shift+P` (Mac)
-2. Type "Tasks: Run Task"
-3. Select "Start FastAPI Development Server"
+Backend (from the project root, virtual environment active):
 
-#### Option 2: Manual Command
 ```bash
-# Make sure you're in the project root and virtual environment is activated
 uvicorn main:app --reload --port 8000
 ```
 
-#### Option 3: Frontend Development Server (for React development)
+Frontend dev server with hot reload:
+
 ```bash
 cd client
-npm start
+npm run dev
 ```
-This runs React dev server on `http://localhost:3000`
 
-### Production Mode with Docker
+This serves the React app on `http://localhost:3000` and proxies `/user` and `/blog` to the backend on port 8000.
+
+### Production mode with Docker
 
 ```bash
-# Build and run the production container
-docker-compose up --build -d
+# Build and run in the background
+docker compose up --build -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
-# Stop the application
-docker-compose down
+# Stop
+docker compose down
 ```
 
 ## Testing
 
-### Run Tests Locally
+The tests need a reachable MongoDB (`MONGODB_URL`, or `localhost:27017`).
+
 ```bash
 # Run all tests
 pytest
 
-# Run tests with coverage
+# What CI enforces
+pytest tests/ --cov=. --cov-fail-under=80
+
+# HTML coverage report
 coverage run -m pytest
-coverage report
-coverage html  # Generate HTML coverage report
+coverage html
 ```
 
-### Run Tests in Docker
+In Docker, against the Compose MongoDB:
+
 ```bash
-# Tests are automatically run during Docker Compose build
-docker-compose up tests
+docker compose run --rm tests
 ```
-
-The application requires **80% test coverage** to pass the build process.
 
 ## API Documentation
 
-Once the FastAPI server is running, you can access:
+With the server running:
 
-- **Interactive API Documentation (Swagger UI)**: `http://localhost:8000/docs`
-- **Alternative API Documentation (ReDoc)**: `http://localhost:8000/redoc`
-- **OpenAPI JSON Schema**: `http://localhost:8000/openapi.json`
+- **Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
+- **OpenAPI schema**: `http://localhost:8000/openapi.json`
 
-### Available Endpoints
+### Endpoints
 
-- **User Routes**: `/users/*` - User management and authentication
-- **Blog Routes**: `/blogs/*` - Blog post CRUD operations
-- **Frontend**: `/` - Serves the React application
+| Method | Path | Success | Notes |
+| --- | --- | --- | --- |
+| `POST` | `/user` | 201 | Creates a user, returns `{message, id}`; password stored as a bcrypt hash |
+| `GET` | `/user` | 200 | Lists users (empty list when there are none); hashes are not returned |
+| `GET` | `/user/{user_id}` | 200 | 404 if not found |
+| `PUT` | `/user/{user_id}` | 200 | Replaces name, email and password; returns the id; 404 if not found |
+| `DELETE` | `/user/{user_id}` | 202 | 404 if not found |
+| `POST` | `/blog` | 201 | Creates a post, returns `{message, id}` |
+| `GET` | `/blog` | 200 | Lists posts (empty list when there are none) |
+| `GET` | `/blog/{blog_id}` | 200 | 404 if not found |
+| `PUT` | `/blog/{blog_id}` | 200 | Returns the updated post; 404 if not found |
+| `DELETE` | `/blog/{blog_id}` | 204 | 404 if not found |
+| `GET` | `/` | 200 | Serves the React app |
+
+User records are plain CRUD: there is no login or token endpoint.
 
 ## Deployment
 
-### AWS Deployment with GitHub Actions
+### AWS deployment with GitHub Actions
 
-The application automatically deploys to AWS when code is pushed to the main branch:
+Flow: **Docker image -> Amazon ECR -> Amazon ECS**. Both AWS workflows are started manually (`workflow_dispatch`) and stay in demo mode until enabled.
 
-**Docker Image → ECR → ECS**
-
-#### CI/CD Demo Mode
-
-The pipelines in this repo run in demo mode — they showcase the full CI/CD flow without touching live AWS:
-
-- Deploy/publish jobs are skipped behind the `DEPLOY_ENABLED` repository variable, and the real ECR/ECS calls are commented out in the workflow files (kept visible for reference).
-- Quality gates (pytest coverage, ESLint, stylelint, SonarQube) still run but are non-blocking, so the pipelines always pass.
-- To activate real deployments: set the repository variable `DEPLOY_ENABLED=true`, add the secrets listed under [Required GitHub Secrets](#required-github-secrets), and uncomment the AWS steps in `deploy.yml` / `main.yml`.
-
-#### GitHub Actions Workflow
-
-The `.github/workflows/deploy.yml` file contains the deployment pipeline:
+The `deploy.yml` pipeline, once its AWS steps are uncommented:
 
 ```yaml
-# 1. Run Tests First
+# 1. Run tests first (MongoDB service container)
 - name: Run tests with coverage
   run: python -m pytest tests/ --cov=. --cov-report=xml --cov-fail-under=80
 
-# 2. Build Docker Image (only if tests pass)
+# 2. Build the image (deploy job needs the test job)
 - name: Build Docker image
-  run: docker build -t devops-aws-farm .
+  run: docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
 
 # 3. Push to Amazon ECR
-- name: Push to ECR
-  run: |
-    aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
-    docker tag devops-aws-farm:latest $ECR_REGISTRY/$ECR_REPOSITORY:latest
-    docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+- name: Push image to Amazon ECR
+  run: docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-# 4. Deploy to Amazon ECS
-- name: Deploy to ECS
+# 4. Roll the ECS service and wait for it to settle
+- name: Deploy to Amazon ECS
   run: |
     aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE --force-new-deployment
     aws ecs wait services-stable --cluster $ECS_CLUSTER --services $ECS_SERVICE
 ```
 
-#### Required GitHub Secrets
+The image does not contain `config/secrets.yml`, so set `MONGODB_URL` in the ECS task definition (ideally as a Secrets Manager reference).
 
-Add these secrets in your GitHub repository settings:
+#### Required GitHub Secrets
 
 ```
 AWS_ACCESS_KEY_ID          # AWS access key
-AWS_SECRET_ACCESS_KEY      # AWS secret key  
+AWS_SECRET_ACCESS_KEY      # AWS secret key
 AWS_REGION                 # AWS region (e.g., us-east-1)
 ECR_REPOSITORY_URI         # ECR repository URI
 ECS_CLUSTER_NAME           # ECS cluster name
 ECS_SERVICE_NAME           # ECS service name
 ```
 
-#### Manual Deployment Commands
+For a real account, prefer GitHub OIDC over long-lived keys: grant the job `id-token: write` and pass `role-to-assume` to `aws-actions/configure-aws-credentials` instead of the two key secrets.
 
-For manual deployment, use these commands:
+#### Manual deployment commands
 
 ```bash
-# 1. Build and tag Docker image
+# 1. Build and tag the image
 docker build -t devops-aws-farm .
 docker tag devops-aws-farm:latest your-account.dkr.ecr.us-east-1.amazonaws.com/devops-aws-farm:latest
 
-# 2. Login to ECR and push image
+# 2. Log in to ECR and push
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin your-account.dkr.ecr.us-east-1.amazonaws.com
 docker push your-account.dkr.ecr.us-east-1.amazonaws.com/devops-aws-farm:latest
 
-# 3. Update ECS service
+# 3. Roll the ECS service
 aws ecs update-service --cluster your-cluster --service your-service --force-new-deployment
 ```
 
@@ -393,82 +346,85 @@ aws ecs update-service --cluster your-cluster --service your-service --force-new
 DevOps-AWS-FARM/
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml     # GitHub Actions CI/CD pipeline
-├── client/                # React frontend application
-│   ├── src/               # React source code
-│   ├── public/            # Static assets
-│   └── package.json       # Node.js dependencies
-├── client_build/          # Built React app (generated, gitignored)
-├── config/                # Configuration files
+│       ├── ci.yml          # Lint, test (MongoDB service), client build on every push/PR
+│       ├── deploy.yml      # Manual: test -> ECR push -> ECS deploy (demo mode)
+│       └── main.yml        # Manual: full quality pipeline -> ECR publish -> ECS (demo mode)
+├── client/                 # React 19 + Vite frontend
+│   ├── src/                # App.jsx, main.jsx, styles
+│   ├── public/             # Static assets
+│   ├── vite.config.js      # Build output to ../client_build, dev proxy to :8000
+│   └── package.json
+├── client_build/           # Built React app (generated, gitignored)
+├── config/
 │   ├── secrets.yml.example # Template for MongoDB credentials
-│   ├── secrets.yml        # Your actual MongoDB credentials (git-ignored)
-│   ├── logging.py         # Logging configuration
-│   └── secrets_parser.py  # Configuration parser
-├── models/                # Pydantic data models
-│   ├── blog_models.py     # Blog-related models
-│   └── user_models.py     # User-related models
-├── routes/                # FastAPI route handlers
-│   ├── blog_routes.py     # Blog API endpoints
-│   └── user_routes.py     # User API endpoints
-├── services/              # Business logic layer
-│   ├── blog_services.py   # Blog operations
-│   └── user_services.py   # User operations
-├── tests/                 # Test suite
-├── utils/                 # Utility functions
-│   └── hashing.py         # Password hashing utilities
-├── main.py                # FastAPI application entry point
-├── requirements.txt       # Python dependencies
-├── Dockerfile             # Docker image definition
-├── docker-compose.yml     # Multi-container setup
-└── README.md             # This file
+│   ├── secrets_parser.py   # Resolves the MongoDB connection
+│   ├── logging.py          # Logging setup from logging.yml
+│   └── logging.yml
+├── models/                 # Pydantic models (blog, user)
+├── routes/                 # FastAPI routers (blog, user)
+├── services/               # MongoDB operations (blog, user)
+├── tests/                  # pytest suite
+├── utils/
+│   └── hashing.py          # bcrypt password hashing
+├── main.py                 # FastAPI app entry point
+├── requirements.txt        # Python dependencies
+├── requirements.lock.txt   # Hash-locked pins CI installs (generated from requirements.txt)
+├── Dockerfile              # Multi-stage app image
+├── Dockerfile.tests        # Test runner image with coverage gate
+├── docker-compose.yml      # MongoDB + tests + app
+└── README.md
 ```
 
 ## Technologies
 
 ### Backend
-- **FastAPI**: Modern, high-performance Python web framework
-- **Uvicorn**: ASGI server for running FastAPI
-- **Pydantic**: Data validation using Python type annotations
-- **PyMongo**: MongoDB driver for Python
-- **Passlib & Bcrypt**: Password hashing and verification
-- **PyYAML**: YAML configuration file support
+
+- **FastAPI**: Python web framework with OpenAPI docs
+- **Uvicorn**: ASGI server
+- **Pydantic v2**: request and response validation
+- **PyMongo**: MongoDB driver
+- **bcrypt**: password hashing
+- **PyYAML**: YAML config and logging setup
 
 ### Frontend
-- **React 19**: JavaScript library for building user interfaces
-- **Vite**: Build tools and development server
 
-### Testing & Quality
-- **Pytest**: Testing framework
-- **Coverage**: Code coverage measurement
-- **Pylint**: Python code linting
-- **Flake8**: Style guide enforcement
-- **Prettier**: Code formatting for JavaScript
-- **ESLint**: JavaScript/React linting
+- **React 19**
+- **Vite 8**: build tool and dev server
+- **Axios**: HTTP client
 
-### DevOps & Deployment
-- **Docker**: Containerization platform
-- **Docker Compose**: Multi-container orchestration
-- **AWS ECR**: Container registry
-- **GitHub Actions**: CI/CD pipeline (configurable)
+### Testing and quality
+
+- **pytest** and **pytest-cov / coverage**: tests and the 80% coverage gate
+- **flake8**: Python linting (blocking in CI)
+- **black**, **ESLint**, **stylelint**, **Prettier**, **SonarQube**: run in the manual `main.yml` pipeline
+
+### DevOps and deployment
+
+- **Docker** and **Docker Compose**
+- **GitHub Actions**
+- **Amazon ECR** and **Amazon ECS**
+- **Renovate**: grouped monthly dependency updates
 
 ### Database
-- **MongoDB**: NoSQL document database
+
+- **MongoDB 8.2** (Docker) or **MongoDB Atlas**
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/new-feature`)
 3. Make your changes
-4. Run tests (`pytest`) and ensure coverage is above 80%
-5. Run linting (`flake8` and `pylint`)
+4. Run tests (`pytest`) and keep coverage above 80%
+5. Run linting (`flake8`)
 6. Commit your changes (`git commit -am 'Add new feature'`)
 7. Push to the branch (`git push origin feature/new-feature`)
-8. Create a Pull Request
+8. Open a Pull Request
 
 ### Code Style
-- Python: Follow PEP 8 guidelines
-- JavaScript: Use Prettier for formatting
-- Ensure all tests pass and maintain test coverage above 80%
+
+- Python: PEP 8, checked by flake8
+- JavaScript: Prettier formatting
+- All tests pass and coverage stays above 80%
 
 ## Troubleshooting
 
@@ -479,19 +435,21 @@ DevOps-AWS-FARM/
    # Windows
    netstat -ano | findstr :8000
    taskkill /PID <PID> /F
-   
+
    # Linux/Mac
    lsof -ti:8000 | xargs kill -9
    ```
 
 2. **MongoDB connection issues:**
    - Ensure MongoDB is running
-   - Check connection string in `config/secrets.yml`
-   - Verify network accessibility
+   - Check `MONGODB_URL` or the connection string in `config/secrets.yml`
+   - Verify network accessibility (Atlas Network Access list)
 
-3. **Dependencies issues:**
+3. **`RuntimeError: Directory 'client_build' does not exist`:**
+   - Build the client first: `cd client && npm install && npm run build`
+
+4. **Dependency issues:**
    ```bash
-   # Update pip and reinstall requirements
    pip install --upgrade pip
    pip install -r requirements.txt --force-reinstall
    ```
@@ -501,4 +459,8 @@ DevOps-AWS-FARM/
 For issues and questions:
 - Create an issue on GitHub
 - Check existing documentation and issues
-- Review the API documentation at `/docs` endpoint
+- Review the API documentation at the `/docs` endpoint
+
+## License
+
+[MIT](LICENSE)
