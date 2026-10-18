@@ -1,5 +1,12 @@
 # $schema: "https://github.com/compose-spec/compose-spec/blob/master/schema/compose-spec.json"
 services:
+  mongo:
+    image: mongo:8.2
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   app:
     build: .
     ports:
@@ -7,13 +14,19 @@ services:
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - DEBUG=${DEBUG:-true}
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - MONGODB_URL=${MONGODB_URL:-mongodb://mongo:27017/blogging}
     depends_on:
-      - tests
+      mongo:
+        condition: service_healthy
+      tests:
+        condition: service_completed_successfully
   tests:
     build:
       context: .
       dockerfile: Dockerfile.tests
     environment:
       - COVERAGE_THRESHOLD=${COVERAGE_THRESHOLD:-80}
+      - MONGODB_URL=${MONGODB_URL:-mongodb://mongo:27017/blogging}
+    depends_on:
+      mongo:
+        condition: service_healthy
