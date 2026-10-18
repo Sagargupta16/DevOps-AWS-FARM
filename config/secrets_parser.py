@@ -1,6 +1,7 @@
 import yaml
 import pymongo
 import os
+from urllib.parse import urlsplit
 
 # Try to get MongoDB URL from environment variable first, fallback to secrets file
 mongodb_url = os.getenv("MONGODB_URL")
@@ -33,12 +34,8 @@ if not mongodb_url:
         # Default local MongoDB connection for CI/testing
         mongodb_url = "mongodb://localhost:27017/blogging"
 
-masked_url = (
-    mongodb_url.replace(mongodb_url.split("@")[0].split("://")[1] + "@", "***:***@")
-    if "@" in mongodb_url
-    else mongodb_url
-)
-print(f"MongoDB connection configured: {masked_url}")
+# Log only the host, never the URL: it can carry the username and password
+print(f"MongoDB connection configured for host: {urlsplit(mongodb_url).hostname}")
 
 
 def get_database():

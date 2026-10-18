@@ -11,7 +11,7 @@ users_collection = get_users_collection()
 
 def create_user(user: UserIn, db: MongoClient = Depends(get_database)):
     logger.info("Creating user")
-    user = user.dict()
+    user = user.model_dump()
     user["id"] = str(ObjectId())
     user["password"] = Hash.bcrypt(user["password"])
     users_collection.insert_one(user)
@@ -24,10 +24,7 @@ def create_user(user: UserIn, db: MongoClient = Depends(get_database)):
 def get_users(db: MongoClient = Depends(get_database)):
     logger.info("Getting All users")
     users = users_collection.find()
-    users = list(users)
-    if users:
-        return users
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return list(users)
 
 
 def get_user(user_id: str, db: MongoClient = Depends(get_database)):
@@ -49,7 +46,7 @@ def delete_user(user_id: str, db: MongoClient = Depends(get_database)):
 
 def update_user(user_id: str, user: UserIn, db: MongoClient = Depends(get_database)):
     logger.info("Updating user")
-    user = user.dict()
+    user = user.model_dump()
     user["password"] = Hash.bcrypt(user["password"])
     user = users_collection.find_one_and_update(
         {"id": user_id}, {"$set": user}, return_document=True
