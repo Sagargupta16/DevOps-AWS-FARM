@@ -57,6 +57,7 @@ pytest tests/ --cov=. --cov-fail-under=80 # what CI enforces
 - `uvicorn main:app` crashes at import if `client_build/` is missing -- build the client first. `npm run build` in `client/` writes straight to `../client_build` (Vite `outDir`).
 - Mongo connection resolves in order: `MONGODB_URL` env var -> `config/secrets.yml` (gitignored) -> `mongodb://localhost:27017/blogging` fallback. The parser warns on a missing secrets file but never fails.
 - `ci.yml` hard-gates on 80% pytest coverage; the manual AWS pipelines run their tests with `continue-on-error`.
+- `ci.yml` installs `requirements.lock.txt` (hash-locked, generated) with `--require-hashes --only-binary :all:`, not `requirements.txt`. After editing `requirements.txt`, regenerate the lock with the `uv pip compile` command in its header or CI installs stale pins.
 - bcrypt is called directly (passlib was dropped: unmaintained, raises on bcrypt 5). bcrypt rejects passwords over 72 bytes, so `UserIn` validates that and returns 422.
 - `config/secrets.yml` is in `.dockerignore`; containers get the connection from `MONGODB_URL`.
 - Local `.env` and `config/secrets.yml` exist on disk but are gitignored and untracked -- keep it that way.

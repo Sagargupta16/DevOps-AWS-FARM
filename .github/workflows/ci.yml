@@ -46,9 +46,13 @@ jobs:
         with:
           python-version: '3.14'
           cache: pip
+          cache-dependency-path: requirements.lock.txt
 
+      # Hash-locked so nothing enters the job without a checksum, and wheels only:
+      # a source distribution runs its build script at install time.
+      # Regenerate the lock with the command in its header after editing requirements.txt.
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install --require-hashes --only-binary :all: -r requirements.lock.txt
 
       - name: Run tests with coverage
         run: python -m pytest tests/ --cov=. --cov-report=term --cov-fail-under=80

@@ -368,6 +368,7 @@ DevOps-AWS-FARM/
 │   └── hashing.py          # bcrypt password hashing
 ├── main.py                 # FastAPI app entry point
 ├── requirements.txt        # Python dependencies
+├── requirements.lock.txt   # Hash-locked pins CI installs (generated from requirements.txt)
 ├── Dockerfile              # Multi-stage app image
 ├── Dockerfile.tests        # Test runner image with coverage gate
 ├── docker-compose.yml      # MongoDB + tests + app
@@ -377,6 +378,7 @@ DevOps-AWS-FARM/
 ## Technologies
 
 ### Backend
+
 - **FastAPI**: Python web framework with OpenAPI docs
 - **Uvicorn**: ASGI server
 - **Pydantic v2**: request and response validation
@@ -385,22 +387,26 @@ DevOps-AWS-FARM/
 - **PyYAML**: YAML config and logging setup
 
 ### Frontend
+
 - **React 19**
 - **Vite 8**: build tool and dev server
 - **Axios**: HTTP client
 
 ### Testing and quality
+
 - **pytest** and **pytest-cov / coverage**: tests and the 80% coverage gate
 - **flake8**: Python linting (blocking in CI)
 - **black**, **ESLint**, **stylelint**, **Prettier**, **SonarQube**: run in the manual `main.yml` pipeline
 
 ### DevOps and deployment
+
 - **Docker** and **Docker Compose**
 - **GitHub Actions**
 - **Amazon ECR** and **Amazon ECS**
 - **Renovate**: grouped monthly dependency updates
 
 ### Database
+
 - **MongoDB 8.2** (Docker) or **MongoDB Atlas**
 
 ## Contributing
@@ -415,6 +421,7 @@ DevOps-AWS-FARM/
 8. Open a Pull Request
 
 ### Code Style
+
 - Python: PEP 8, checked by flake8
 - JavaScript: Prettier formatting
 - All tests pass and coverage stays above 80%

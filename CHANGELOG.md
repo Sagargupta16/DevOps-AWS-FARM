@@ -13,7 +13,10 @@
 
 ### Security
 
-- Stop logging the MongoDB connection URL (CodeQL `py/clear-text-logging-sensitive-data`); only the host is logged
+- Stop logging the MongoDB connection URL (CodeQL `py/clear-text-logging-sensitive-data`); only its source (env var, secrets file or local default) is logged
+- Raise the `pymongo` floor to 4.18.2 (CVE-2026-96748, CVE-2026-96749 high; CVE-2026-88029, CVE-2026-96747, CVE-2024-5629 medium)
+- `ci.yml` installs from `requirements.lock.txt`, a hash-locked pin of the full tree, with `--require-hashes --only-binary :all:`
+- Pin the third-party actions in `main.yml` to full commit SHAs: sonarqube-scan-action v8.3.0, setup-buildx-action v4.4.1
 - Exclude `config/secrets.yml`, `.env.*`, virtualenvs, `node_modules` and build output from the Docker build context so credentials are not baked into the image
 - Remove the `/var/run/docker.sock` mount from the app container
 - Add least-privilege `permissions: contents: read` to all workflows (CodeQL `actions/missing-workflow-permissions`); the black auto-format job gets explicit write scopes
@@ -30,13 +33,9 @@
 
 ## [1.3.5] - 2026-10-06
 
-### Fixed
-
 - Bump axios to 1.20.0 and resolve the open Dependabot alerts (#151, #152)
 
 ## [1.3.4] - 2026-09-03
-
-### Changed
 
 - Re-enabled Renovate via the shared preset: one grouped dependency PR in the first week of each month, immediate auto-merged security fixes.
 

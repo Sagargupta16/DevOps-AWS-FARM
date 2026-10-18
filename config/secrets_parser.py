@@ -1,13 +1,14 @@
 import yaml
 import pymongo
 import os
-from urllib.parse import urlsplit
 
 # Try to get MongoDB URL from environment variable first, fallback to secrets file
 mongodb_url = os.getenv("MONGODB_URL")
+config_source = "MONGODB_URL environment variable"
 
 if not mongodb_url:
     # Fallback to secrets file if environment variable is not set
+    config_source = "config/secrets.yml"
     try:
         with open("config/secrets.yml", "r") as stream:
             secrets = yaml.safe_load(stream)
@@ -33,9 +34,10 @@ if not mongodb_url:
         print("Using default local MongoDB connection for testing/development")
         # Default local MongoDB connection for CI/testing
         mongodb_url = "mongodb://localhost:27017/blogging"
+        config_source = "default local connection"
 
-# Log only the host, never the URL: it can carry the username and password
-print(f"MongoDB connection configured for host: {urlsplit(mongodb_url).hostname}")
+# Log where the URL came from, never any part of it: it can carry credentials
+print(f"MongoDB connection configured from {config_source}")
 
 
 def get_database():
