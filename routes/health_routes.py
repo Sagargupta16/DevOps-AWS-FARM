@@ -13,11 +13,8 @@ router = APIRouter()
     responses={503: {"description": "MongoDB did not answer a ping"}},
 )
 def health_route():
-    """
-    Liveness and readiness in one: 200 only when MongoDB answers a ping.
-
-    The Docker HEALTHCHECK, the compose healthcheck and the ECS/ALB target group all call this.
-    """
+    """Liveness and readiness in one: 200 only when MongoDB answers a ping."""
+    # The Docker HEALTHCHECK, the compose healthcheck and the ECS/ALB target group all call this
     try:
         ping_database()
     except PyMongoError as e:

@@ -1,15 +1,13 @@
-"""
-Load demo users and blog posts through the public API.
+"""Load demo users and blog posts through the public API."""
 
-    python scripts/seed.py                         # against http://localhost:8000
-    python scripts/seed.py --url http://localhost:3000
-
-Safe to re-run: a user whose email already exists comes back as 409 and is skipped,
-and blog posts are only added when no post with the same title is there yet.
-Standard library only, so it runs from any Python 3.11+ without the app's dependencies.
-Demo data only goes to a local app: --url must be http(s) on localhost, 127.0.0.1 or ::1.
-Demo passwords are random per run; the app has no login, so nothing needs them later.
-"""
+#   python scripts/seed.py                         # against http://localhost:8000
+#   python scripts/seed.py --url http://localhost:3000
+#
+# Safe to re-run: a user whose email already exists comes back as 409 and is skipped,
+# and blog posts are only added when no post with the same title is there yet.
+# Standard library only, so it runs from any Python 3.11+ without the app's dependencies.
+# Demo data only goes to a local app: --url must be http(s) on localhost, 127.0.0.1 or ::1.
+# Demo passwords are random per run; the app has no login, so nothing needs them later.
 
 import argparse
 import http.client
@@ -52,6 +50,7 @@ class LocalApi:
     """JSON client for an app on a loopback host, built from an allowlisted scheme and host."""
 
     def __init__(self, url: str):
+        """Accept only http(s) on a LOCAL_HOSTS host, or raise ValueError."""
         parts = urllib.parse.urlsplit(url)
         connection = {
             "http": http.client.HTTPConnection,
@@ -122,7 +121,7 @@ def seed(api: LocalApi) -> int:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", default="http://localhost:8000", help="API base URL")
     try:
         local_api = LocalApi(parser.parse_args().url)
