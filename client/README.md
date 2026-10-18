@@ -22,7 +22,7 @@ A modern React frontend for the DevOps Farm management system built with Vite.
 
 ### Prerequisites
 
-- Node.js 20+ and npm
+- Node.js 20.19+ or 22.12+ and npm
 - FastAPI backend running on port 8000
 
 ### Installation
@@ -34,7 +34,7 @@ npm install
 
 2. Start development server:
 ```bash
-npm start
+npm run dev
 ```
 
 The app will open at [http://localhost:3000](http://localhost:3000)
@@ -49,9 +49,9 @@ This builds the app for production into the `../client_build` folder, which is s
 
 ## API Integration
 
-The frontend connects to the FastAPI backend at:
-- **Development**: `http://localhost:8000`
-- **Production**: Same domain as the app
+The frontend always calls the API on its own origin:
+- **Development**: the Vite dev server proxies `/user` and `/blog` to `http://localhost:8000`
+- **Production**: FastAPI serves the built app and the API from the same domain
 
 ### API Endpoints Used
 
@@ -100,16 +100,16 @@ client/
 
 ## Deployment
 
-The frontend is automatically built and served by the FastAPI backend in production. The GitHub Actions workflow handles:
+The frontend is built into the Docker image and served by the FastAPI backend. `ci.yml` builds it on every push; the manual AWS workflows handle:
 
-1. Building the React app
-2. Moving build files to `client_build/`
-3. Including in Docker image
+1. Building the React app into `client_build/`
+2. Including it in the Docker image
+3. Pushing the image to Amazon ECR
 4. Deploying to AWS ECS
 
 ## Contributing
 
 1. Make changes to components in `src/`
-2. Test locally with `npm start`
+2. Test locally with `npm run dev`
 3. Build with `npm run build`
-4. Commit and push - GitHub Actions handles deployment
+4. Commit and push - `ci.yml` builds the client on every push
