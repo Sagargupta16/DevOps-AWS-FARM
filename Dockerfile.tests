@@ -1,8 +1,9 @@
-FROM python:3.14-alpine
+FROM python:3.14-slim
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 WORKDIR /app
+COPY requirements.lock.txt ./
+RUN pip install --no-cache-dir --require-hashes --only-binary :all: -r requirements.lock.txt
 COPY . /app/
-RUN apk add --no-cache gcc musl-dev python3-dev && \
-    pip install --upgrade pip && \
-    pip install -r requirements.txt
 EXPOSE 8000
-CMD ["sh", "-c", "coverage run -m pytest && coverage report --fail-under=${COVERAGE_THRESHOLD:-80}"]
+CMD ["sh", "-c", "python -m pytest tests/ --cov=. --cov-report=term --cov-fail-under=${COVERAGE_THRESHOLD:-80}"]
