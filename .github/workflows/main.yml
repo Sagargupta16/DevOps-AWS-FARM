@@ -108,27 +108,27 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm install
+          npm ci --ignore-scripts
         working-directory: ./client
 
       - name: Analysing the code with eslint
         continue-on-error: true  # demo: non-blocking
         run: |
-          npm install eslint
+          npm install --ignore-scripts eslint
           npx eslint $(git ls-files '*.js')
         working-directory: ./client
 
       - name: Analysing the code with stylelint
         continue-on-error: true  # demo: non-blocking
         run: |
-          npm install stylelint
-          npm install --save-dev stylelint-config-standard
+          npm install --ignore-scripts stylelint
+          npm install --ignore-scripts --save-dev stylelint-config-standard
           npx stylelint $(git ls-files '*.css')
         working-directory: ./client
 
       - name: Analysing the code with prettier
         run: |
-          npm install prettier
+          npm install --ignore-scripts prettier
           npx prettier --write $(git ls-files '*.js')
           npx prettier --check $(git ls-files '*.js')
         working-directory: ./client
@@ -168,10 +168,7 @@ jobs:
         uses: actions/checkout@v7
       
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install pytest
-          pip install coverage
+        run: "pip install --require-hashes --only-binary :all: -r requirements.lock.txt"
   
       - name: Run tests with coverage
         continue-on-error: true  # demo: non-blocking
@@ -204,7 +201,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm install
+          npm ci --ignore-scripts
         working-directory: ./client
 
       - name: Build client
@@ -267,6 +264,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      # id-token: write  # uncomment with the AWS steps below: OIDC needs it, no access keys are stored
     steps:
       - name: Checkout code repository
         uses: actions/checkout@v7
@@ -294,11 +292,10 @@ jobs:
       #     release_name: Release ${{ env.BUILD_VERSION}}
       #     body: ${{ steps.read_version.outputs.changelog }}
       #
-      # - name: Configure AWS credentials for Docker
-      #   uses: aws-actions/configure-aws-credentials@v6
+      # - name: Configure AWS credentials for Docker (OIDC, see aws/)
+      #   uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd  # v6.3.0
       #   with:
-      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     role-to-assume: ${{ vars.AWS_ROLE_ARN }}
       #     aws-region: ${{ secrets.AWS_REGION }}
       #
       # - name: Docker login to Amazon ECR registry

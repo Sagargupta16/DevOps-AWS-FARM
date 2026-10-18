@@ -12,7 +12,12 @@ from services.user_services import (
 router = APIRouter()
 
 
-@router.post("/user", status_code=status.HTTP_201_CREATED, tags=["users"])
+@router.post(
+    "/user",
+    status_code=status.HTTP_201_CREATED,
+    tags=["users"],
+    responses={409: {"description": "Email already belongs to another user"}},
+)
 def create_user_route(user: UserIn):
     return create_user(user)
 
@@ -42,6 +47,11 @@ def delete_user_route(user_id: str):
     return delete_user(user_id)
 
 
-@router.put("/user/{user_id}", status_code=status.HTTP_200_OK, tags=["users"])
+@router.put(
+    "/user/{user_id}",
+    status_code=status.HTTP_200_OK,
+    tags=["users"],
+    responses={409: {"description": "Email already belongs to another user"}},
+)
 def update_user_route(user_id: str, user: UserIn):
     return update_user(user_id, user)

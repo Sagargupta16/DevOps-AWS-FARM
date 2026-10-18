@@ -1,6 +1,7 @@
 import yaml
 import pymongo
 import os
+from functools import cache
 
 # Try to get MongoDB URL from environment variable first, fallback to secrets file
 mongodb_url = os.getenv("MONGODB_URL")
@@ -40,9 +41,20 @@ if not mongodb_url:
 print(f"MongoDB connection configured from {config_source}")
 
 
+@cache
+def get_client():
+    # One client per process: MongoClient owns a connection pool and is thread-safe
+    return pymongo.MongoClient(mongodb_url)
+
+
 def get_database():
-    client = pymongo.MongoClient(mongodb_url)
-    return client["blogging"]
+    return get_client()["blogging"]
+
+
+def ping_database(timeout_seconds: float = 2.0) -> None:
+    """Raise if MongoDB does not answer a ping within timeout_seconds."""
+    with pymongo.timeout(timeout_seconds):
+        get_client().admin.command("ping")
 
 
 def get_blogs_collection():
