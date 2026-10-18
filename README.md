@@ -270,7 +270,7 @@ docker compose down
 
 ## Testing
 
-The tests need a reachable MongoDB (`MONGODB_URL`, or `localhost:27017`). They go through the real app over HTTP: CRUD happy paths, 404 for unknown ids, 422 for bad bodies and over-long passwords, 409 for duplicate emails (including the race the unique index catches), `/health` up and down, and the JSON log fields. The run on 2026-10-18 against MongoDB 8.2: 31 passed, 94.69% coverage.
+The tests need a reachable MongoDB (`MONGODB_URL`, or `localhost:27017`). They go through the real app over HTTP: CRUD happy paths, 404 for unknown ids, 422 for bad bodies and over-long passwords, 409 for duplicate emails (including the race the unique index catches), `/health` up and down, and the JSON log fields. The run on 2026-10-18 against MongoDB 8.2: 31 passed, 94.70% coverage.
 
 ```bash
 # Run all tests

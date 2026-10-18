@@ -33,8 +33,9 @@ def test_unique_index_catches_a_race(client, new_user, monkeypatch):
         "services.user_services._reject_taken_email", lambda *a, **k: None
     )
 
+    duplicate = UserIn(**new_user(email=payload["email"]))
     with pytest.raises(HTTPException) as exc:
-        create_user(UserIn(**new_user(email=payload["email"])))
+        create_user(duplicate)
     assert exc.value.status_code == status.HTTP_409_CONFLICT
 
 

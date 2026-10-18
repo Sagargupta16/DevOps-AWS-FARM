@@ -33,7 +33,7 @@ def new_user():
         payload = {
             "name": f"{MARKER}-{tag}",
             "email": f"{MARKER}-{tag}@example.com",
-            "password": "s3cret-pass",
+            "password": uuid.uuid4().hex,
         }
         return payload | overrides
 

@@ -47,10 +47,11 @@ async function captureApiDocs(browser) {
 await mkdir(OUT_DIR, { recursive: true });
 const browser = await chromium.launch();
 try {
-  for (const [name, options] of Object.entries(viewports)) {
-    await capture(browser, name, options);
-  }
-  await captureApiDocs(browser);
+  // Each capture has its own browser context, so they run in parallel
+  await Promise.all([
+    ...Object.entries(viewports).map(([name, options]) => capture(browser, name, options)),
+    captureApiDocs(browser),
+  ]);
 } finally {
   await browser.close();
 }
