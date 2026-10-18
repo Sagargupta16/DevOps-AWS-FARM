@@ -52,7 +52,7 @@ jobs:
       # a source distribution runs its build script at install time.
       # Regenerate the lock with the command in its header after editing requirements.txt.
       - name: Install dependencies
-        run: pip install --require-hashes --only-binary :all: -r requirements.lock.txt
+        run: "pip install --require-hashes --only-binary :all: -r requirements.lock.txt"
 
       - name: Run tests with coverage
         run: python -m pytest tests/ --cov=. --cov-report=term --cov-fail-under=80
