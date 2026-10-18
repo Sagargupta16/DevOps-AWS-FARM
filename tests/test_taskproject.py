@@ -1,121 +1,86 @@
-from models.blog_models import BlogIn
-from models.user_models import UserIn
-from routes.blog_routes import (
-    get_blog_route,
-    get_blogs_route,
-    create_blog_route,
-    delete_blog_route,
-)
-from routes.user_routes import (
-    get_user_route,
-    get_users_route,
-    create_user_route,
-    delete_user_route,
-    update_user_route,
-)
+"""Happy-path CRUD for users and blogs, exercised over HTTP through the real app."""
+
+import bcrypt
+
+from config.secrets_parser import get_users_collection
 
 
-def test_user():
-    user = UserIn(name="test", email="test@gmail.com", password="test123")
-    created_user = create_user_route(user)
-    user_id = created_user["id"]
-    try:
-        user = get_user_route(user_id)
-        assert user["name"] == "test"
-        assert user["email"] == "test@gmail.com"
-        assert user["password"] != "test123"
-    finally:
-        delete_user_route(user_id)
+def test_create_and_get_user(client, new_user):
+    payload = new_user()
+    created = client.post("/user", json=payload)
+    assert created.status_code == 201
+    user_id = created.json()["id"]
+
+    fetched = client.get(f"/user/{user_id}")
+    assert fetched.status_code == 200
+    body = fetched.json()
+    assert body == {"id": user_id, "name": payload["name"], "email": payload["email"]}
+    assert "password" not in body
 
 
-def test_users():
-    users = [
-        UserIn(name="test1", email="test1@gmail.com", password="test123"),
-        UserIn(name="test2", email="test2@gmail.com", password="test123"),
-    ]
-    created_user_ids = []
-    try:
-        for user in users:
-            created_user = create_user_route(user)
-            created_user_ids.append(created_user["id"])
+def test_password_is_stored_as_bcrypt_hash(client, new_user):
+    payload = new_user()
+    user_id = client.post("/user", json=payload).json()["id"]
 
-        users = get_users_route()
-        for user in users:
-            if user["name"] in ["test1", "test2"]:
-                assert user["name"] in ["test1", "test2"]
-                assert user["email"] in ["test1@gmail.com", "test2@gmail.com"]
-    finally:
-        for user_id in created_user_ids:
-            delete_user_route(user_id)
+    stored = get_users_collection().find_one({"id": user_id})
+    assert stored["password"] != payload["password"]
+    assert bcrypt.checkpw(payload["password"].encode(), stored["password"].encode())
 
 
-def test_update_user():
-    user = UserIn(name="test", email="test@gmail.com", password="test123")
-    new_user = UserIn(name="test1", email="test1@gmail.com", password="test123")
-    created_user = create_user_route(user)
-    user_id = created_user["id"]
-    try:
-        updated_user = update_user_route(user_id, new_user)
-        updated_user = get_user_route(user_id)
-        print(updated_user)
-        assert updated_user["name"] == "test1"
-        assert updated_user["email"] == "test1@gmail.com"
-        assert updated_user["password"] != "test123"
-    finally:
-        delete_user_route(user_id)
+def test_list_users_includes_created(client, new_user):
+    ids = {client.post("/user", json=new_user()).json()["id"] for _ in range(2)}
+
+    listed = client.get("/user")
+    assert listed.status_code == 200
+    assert ids <= {u["id"] for u in listed.json()}
 
 
-def test_blog():
-    blog = BlogIn(title="test", content="test", creator="test")
-    created_blog = create_blog_route(blog)
-    blog_id = created_blog["id"]
-    try:
-        blog = get_blog_route(blog_id)
-        assert blog["title"] == "test"
-        assert blog["content"] == "test"
-        assert blog["creator"] == "test"
-    finally:
-        delete_blog_route(blog_id)
+def test_update_user_rehashes_password(client, new_user):
+    user_id = client.post("/user", json=new_user()).json()["id"]
+    changes = new_user(password="a-new-password")
+
+    updated = client.put(f"/user/{user_id}", json=changes)
+    assert updated.status_code == 200
+
+    fetched = client.get(f"/user/{user_id}").json()
+    assert fetched["name"] == changes["name"]
+    assert fetched["email"] == changes["email"]
+    stored = get_users_collection().find_one({"id": user_id})
+    assert bcrypt.checkpw(b"a-new-password", stored["password"].encode())
 
 
-def test_blogs():
-    blogs = [
-        BlogIn(title="test1", content="test1", creator="test1"),
-        BlogIn(title="test2", content="test2", creator="test2"),
-    ]
-    created_blog_ids = []
-    try:
-        for blog in blogs:
-            created_blog = create_blog_route(blog)
-            created_blog_ids.append(created_blog["id"])
-        blogs = get_blogs_route()
-        for blog in blogs:
-            if blog["title"] in ["test1", "test2"]:
-                assert blog["title"] in ["test1", "test2"]
-                assert blog["content"] in ["test1", "test2"]
-    finally:
-        for blog_id in created_blog_ids:
-            delete_blog_route(blog_id)
+def test_user_can_keep_own_email_on_update(client, new_user):
+    payload = new_user()
+    user_id = client.post("/user", json=payload).json()["id"]
+
+    updated = client.put(f"/user/{user_id}", json=payload | {"password": "rotated"})
+    assert updated.status_code == 200
 
 
-def test_delete_users():
-    create_user_route(UserIn(name="test", email="test@gmail.com", password="test123"))
-    create_blog_route(BlogIn(title="test", content="This is a test blog", creator="test"))
-    try:
-        users = get_users_route()
-        for user in users:
-            if user["name"] == "test":
-                deleted_user = delete_user_route(user["id"])
-                assert deleted_user["message"] == "User deleted successfully"
-    except Exception:
-        # No users found, nothing to delete
-        pass
-    try:
-        blogs = get_blogs_route()
-        for blog in blogs:
-            if blog["title"] == "test":
-                deleted_blog = delete_blog_route(blog["id"])
-                assert deleted_blog["message"] == "Blog deleted successfully"
-    except Exception:
-        # No blogs found, nothing to delete
-        pass
+def test_delete_user(client, new_user):
+    user_id = client.post("/user", json=new_user()).json()["id"]
+
+    deleted = client.delete(f"/user/{user_id}")
+    assert deleted.status_code == 202
+    assert client.get(f"/user/{user_id}").status_code == 404
+
+
+def test_blog_crud(client, new_blog):
+    payload = new_blog()
+    created = client.post("/blog", json=payload)
+    assert created.status_code == 201
+    blog_id = created.json()["id"]
+
+    fetched = client.get(f"/blog/{blog_id}")
+    assert fetched.status_code == 200
+    assert fetched.json() == {"id": blog_id, **payload}
+
+    assert blog_id in {b["id"] for b in client.get("/blog").json()}
+
+    changes = new_blog(title="Edited title")
+    updated = client.put(f"/blog/{blog_id}", json=changes)
+    assert updated.status_code == 200
+    assert updated.json()["title"] == "Edited title"
+
+    assert client.delete(f"/blog/{blog_id}").status_code == 204
+    assert client.get(f"/blog/{blog_id}").status_code == 404
