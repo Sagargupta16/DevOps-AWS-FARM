@@ -1,52 +1,23 @@
-from fastapi import HTTPException, status
-from routes.blog_routes import get_blog_route, update_blog_route, delete_blog_route
-from routes.user_routes import get_user_route, update_user_route, delete_user_route
-from models.blog_models import BlogIn
-from models.user_models import UserIn
+"""Unknown ids return 404 on every read, update and delete route."""
+
+import pytest
+
+MISSING_ID = "000000000000000000000000"
 
 
-def test_user_not_found():
-    try:
-        get_user_route("non_existing_id")
-    except HTTPException as e:
-        assert e.status_code == status.HTTP_404_NOT_FOUND
+@pytest.mark.parametrize("resource", ["user", "blog"])
+def test_get_missing_returns_404(client, resource):
+    assert client.get(f"/{resource}/{MISSING_ID}").status_code == 404
 
 
-def test_blog_not_found():
-    try:
-        get_blog_route("non_existing_id")
-    except HTTPException as e:
-        assert e.status_code == status.HTTP_404_NOT_FOUND
+@pytest.mark.parametrize("resource", ["user", "blog"])
+def test_delete_missing_returns_404(client, resource):
+    assert client.delete(f"/{resource}/{MISSING_ID}").status_code == 404
 
 
-def test_update_user_not_found():
-    try:
-        update_user_route(
-            "non_existing_id",
-            UserIn(name="test", email="test@gmail.com", password="test123"),
-        )
-    except HTTPException as e:
-        assert e.status_code == status.HTTP_404_NOT_FOUND
+def test_update_missing_user_returns_404(client, new_user):
+    assert client.put(f"/user/{MISSING_ID}", json=new_user()).status_code == 404
 
 
-def test_update_blog_not_found():
-    try:
-        update_blog_route(
-            "non_existing_id", BlogIn(title="test", content="test", creator="test")
-        )
-    except HTTPException as e:
-        assert e.status_code == status.HTTP_404_NOT_FOUND
-
-
-def test_delete_user_not_found():
-    try:
-        delete_user_route("non_existing_id")
-    except HTTPException as e:
-        assert e.status_code == status.HTTP_404_NOT_FOUND
-
-
-def test_delete_blog_not_found():
-    try:
-        delete_blog_route("non_existing_id")
-    except HTTPException as e:
-        assert e.status_code == status.HTTP_404_NOT_FOUND
+def test_update_missing_blog_returns_404(client, new_blog):
+    assert client.put(f"/blog/{MISSING_ID}", json=new_blog()).status_code == 404

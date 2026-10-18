@@ -50,7 +50,7 @@ This builds the app for production into the `../client_build` folder, which is s
 ## API Integration
 
 The frontend always calls the API on its own origin:
-- **Development**: the Vite dev server proxies `/user` and `/blog` to `http://localhost:8000`
+- **Development**: the Vite dev server proxies `/user`, `/blog` and `/health` to `http://localhost:8000`
 - **Production**: FastAPI serves the built app and the API from the same domain
 
 ### API Endpoints Used
@@ -71,6 +71,8 @@ client/
 ├── public/
 │   ├── manifest.json
 │   └── robots.txt
+├── scripts/
+│   └── screenshots.mjs # Playwright capture of the README screenshots
 ├── src/
 │   ├── App.jsx         # Main application component
 │   ├── App.css         # Application styles
@@ -89,6 +91,7 @@ client/
 - `npm start` (or `npm run dev`) - Start development server
 - `npm run build` - Build for production
 - `npm run preview` - Preview the production build locally
+- `npm run screenshots` - Capture desktop and phone screenshots of a running app into `../assets/screenshots/` (`BASE_URL` defaults to `http://localhost:8000`; first run needs `npx playwright install chromium`)
 
 ### Code Style
 

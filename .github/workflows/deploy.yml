@@ -1,19 +1,28 @@
 name: Deploy to AWS ECS
 
-# Sample/reference pipeline: run manually only (no live AWS deployment is maintained)
-# Demo mode: the deploy job is skipped unless the repo variable DEPLOY_ENABLED is 'true',
-# and the real AWS calls are commented out below (kept visible for showcase).
+# Manual pipeline: test -> build the image -> push to ECR -> roll the ECS service onto it.
+# Demo mode: the deploy job is skipped unless the repo variable DEPLOY_ENABLED is 'true'.
+# AWS access is keyless: the job trades a GitHub OIDC token for the role in AWS_ROLE_ARN,
+# so no AWS access keys are stored in the repo. Role and policy templates: aws/.
 on:
   workflow_dispatch:
 
+# Plain repo variables, not secrets: none of these is sensitive, and secrets would mask them in logs
 env:
-  AWS_REGION: ${{ secrets.AWS_REGION }}
-  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_URI }}
-  ECS_SERVICE: ${{ secrets.ECS_SERVICE_NAME }}
-  ECS_CLUSTER: ${{ secrets.ECS_CLUSTER_NAME }}
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+  ECS_SERVICE: ${{ vars.ECS_SERVICE }}
+  ECS_TASK_FAMILY: ${{ vars.ECS_TASK_FAMILY }}
+  ECS_CONTAINER_NAME: ${{ vars.ECS_CONTAINER_NAME }}
 
 permissions:
   contents: read
+
+# Never run two rollouts of the same service at once; queue the second instead of cancelling
+concurrency:
+  group: deploy-ecs
+  cancel-in-progress: false
 
 jobs:
   test:
@@ -39,78 +48,86 @@ jobs:
       uses: actions/setup-python@v7
       with:
         python-version: '3.14'
+        cache: pip
+        cache-dependency-path: requirements.lock.txt
         
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest-cov
+      run: "pip install --require-hashes --only-binary :all: -r requirements.lock.txt"
         
+    # Blocking: a red suite stops the deploy job below
     - name: Run tests with coverage
-      continue-on-error: true  # demo: non-blocking
-      run: |
-        python -m pytest tests/ --cov=. --cov-report=xml --cov-fail-under=80
-        echo "Tests passed with 80%+ coverage"
+      run: python -m pytest tests/ --cov=. --cov-report=xml --cov-fail-under=80
       env:
-        MONGODB_URL: ${{ secrets.MONGODB_URL }}
+        MONGODB_URL: mongodb://localhost:27017/blogging
 
   deploy:
     name: Build and Deploy to AWS
     runs-on: ubuntu-latest
     needs: test  # Only run if tests pass
     if: ${{ vars.DEPLOY_ENABLED == 'true' }}  # demo: skipped unless repo variable DEPLOY_ENABLED=true
-    
+    # Add required reviewers to this environment in the repo settings to gate every rollout on an approval
+    environment:
+      name: production
+      url: ${{ vars.APP_URL }}
+    permissions:
+      contents: read
+      id-token: write  # lets the job request the OIDC token that AWS exchanges for short-lived credentials
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v7
 
-    - name: Deployment placeholder (no-op)
-      run: echo "DEPLOY_ENABLED=true - configure AWS secrets and uncomment the steps below in deploy.yml to deploy for real"
+    - name: Configure AWS credentials (OIDC, no stored keys)
+      uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd  # v6.3.0
+      with:
+        role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+        role-session-name: devops-aws-farm-${{ github.run_id }}
+        aws-region: ${{ env.AWS_REGION }}
 
-    # Real AWS steps kept for showcase - uncomment to activate:
-    #
-    # - name: Configure AWS credentials
-    #   uses: aws-actions/configure-aws-credentials@v6
-    #   with:
-    #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-    #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    #     aws-region: ${{ env.AWS_REGION }}
-    #
-    # - name: Login to Amazon ECR
-    #   id: login-ecr
-    #   uses: aws-actions/amazon-ecr-login@v2
-    #
-    # - name: Build Docker image
-    #   env:
-    #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-    #     IMAGE_TAG: ${{ github.sha }}
-    #   run: |
-    #     # Build Docker image
-    #     docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-    #     docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
-    #
-    # - name: Push image to Amazon ECR
-    #   env:
-    #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-    #     IMAGE_TAG: ${{ github.sha }}
-    #   run: |
-    #     # Push Docker image to ECR
-    #     docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-    #     docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-    #
-    # - name: Deploy to Amazon ECS
-    #   run: |
-    #     # Force new deployment in ECS
-    #     aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE --force-new-deployment
-    #
-    #     # Wait for deployment to complete
-    #     echo "Waiting for ECS service to become stable..."
-    #     aws ecs wait services-stable --cluster $ECS_CLUSTER --services $ECS_SERVICE
-    #
-    #     # Verify deployment
-    #     echo "Deployment completed successfully!"
-    #     aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE \
-    #       --query 'services[0].{Status:status,RunningCount:runningCount,DesiredCount:desiredCount}'
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd  # v2.1.7
+
+    # Tagged with the commit SHA, never :latest, so every task definition revision names the exact build.
+    # The repository uses immutable tags, so a re-run of the same commit reuses the image it already pushed
+    - name: Build and push image
+      id: image
+      env:
+        IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+      run: |
+        if aws ecr describe-images --repository-name "$ECR_REPOSITORY" --image-ids imageTag="$GITHUB_SHA" > /dev/null 2>&1; then
+          echo "Image for $GITHUB_SHA is already in ECR, reusing it"
+        else
+          docker build --tag "$IMAGE" .
+          docker push "$IMAGE"
+        fi
+        echo "uri=$IMAGE" >> "$GITHUB_OUTPUT"
+
+    # Starts from the latest registered revision of the family, so CPU, memory, secrets and
+    # the health check stay defined in AWS and only the image changes here
+    - name: Render task definition with the new image
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@8d79160660ad39c402a16e5fc7cd2a32e8f7d6b7  # v1.9.1
+      with:
+        task-definition-family: ${{ env.ECS_TASK_FAMILY }}
+        container-name: ${{ env.ECS_CONTAINER_NAME }}
+        image: ${{ steps.image.outputs.uri }}
+
+    # Fails the job if the service does not reach a steady state; with the ECS deployment
+    # circuit breaker enabled on the service, ECS also rolls back to the last good revision
+    - name: Deploy to Amazon ECS and wait for the service to stabilise
+      uses: aws-actions/amazon-ecs-deploy-task-definition@a00d4d57ac0de1a99b39fe469f3d898d38717c2b  # v2.6.4
+      with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        service: ${{ env.ECS_SERVICE }}
+        wait-for-service-stability: true
+
+    - name: Smoke test /health
+      if: ${{ vars.APP_URL != '' }}
+      env:
+        APP_URL: ${{ vars.APP_URL }}
+      run: curl --fail --silent --show-error --retry 5 --retry-delay 10 --retry-all-errors "$APP_URL/health"
 
   deploy-demo:
     name: Demo Mode (deployment skipped)
@@ -121,4 +138,4 @@ jobs:
     steps:
     - name: Explain demo mode
       run: |
-        echo "demo mode: deployment skipped - set repo variable DEPLOY_ENABLED=true and configure AWS secrets to activate"
+        echo "demo mode: deployment skipped - set repo variable DEPLOY_ENABLED=true and the AWS variables in aws/README.md to activate"
