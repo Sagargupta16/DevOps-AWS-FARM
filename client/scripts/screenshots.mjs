@@ -5,7 +5,7 @@
 //   npm run screenshots                   (from client/; BASE_URL=http://host:port to point elsewhere)
 //
 // Writes PNGs to assets/screenshots/ at desktop (1440x900) and phone (390x844) sizes.
-import { mkdir } from 'node:fs/promises';
+// page.screenshot creates the folder if it is missing.
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
@@ -44,7 +44,6 @@ async function captureApiDocs(browser) {
   await context.close();
 }
 
-await mkdir(OUT_DIR, { recursive: true });
 const browser = await chromium.launch();
 try {
   // Each capture has its own browser context, so they run in parallel

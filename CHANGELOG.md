@@ -7,7 +7,7 @@
 - `GET /health`: pings MongoDB with a 2 second timeout and returns 200 `{"status": "ok", "database": "up"}` or 503 `{"status": "unavailable", "database": "down"}`. Used by the Docker `HEALTHCHECK`, the ECS task definition template and the ALB target group
 - Structured logs: `LOG_FORMAT=json` (the image default) writes one JSON object per line, and a middleware logs method, path, status and `duration_ms` for every request
 - Email is unique: a unique index created at startup plus a pre-check return 409 on create, and on update when the email belongs to another user
-- `scripts/seed.py` loads demo users and posts through the API (standard library only, idempotent)
+- `scripts/seed.py` loads demo users and posts through the API (standard library only, idempotent). `--url` only accepts http(s) on localhost, 127.0.0.1 or ::1, and demo passwords are random per run
 - README screenshots at desktop (1440x900) and phone (390x844) widths, captured by `client/scripts/screenshots.mjs` (Playwright, `npm run screenshots`)
 - `aws/`: GitHub OIDC trust policy, least-privilege deploy role policy, Fargate task definition template and a setup and teardown guide
 

@@ -53,7 +53,9 @@ def test_user_can_keep_own_email_on_update(client, new_user):
     payload = new_user()
     user_id = client.post("/user", json=payload).json()["id"]
 
-    updated = client.put(f"/user/{user_id}", json=payload | {"password": "rotated"})
+    updated = client.put(
+        f"/user/{user_id}", json=new_user(name=payload["name"], email=payload["email"])
+    )
     assert updated.status_code == 200
 
 

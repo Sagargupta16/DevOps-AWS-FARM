@@ -398,9 +398,13 @@ docker build -t your-account.dkr.ecr.us-east-1.amazonaws.com/devops-aws-farm:$TA
 # 2. Log in to ECR and push
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin your-account.dkr.ecr.us-east-1.amazonaws.com
 docker push your-account.dkr.ecr.us-east-1.amazonaws.com/devops-aws-farm:$TAG
+
+# 3. Point `image` in aws/task-definition.json at the new tag, register the revision and roll the service onto it
+aws ecs register-task-definition --cli-input-json file://aws/task-definition.json
+aws ecs update-service --cluster devops-aws-farm --service devops-aws-farm --task-definition devops-aws-farm
 ```
 
-3. Register a task definition revision that points at the new tag (edit `image` in `aws/task-definition.json`, then `aws ecs register-task-definition --cli-input-json file://aws/task-definition.json`) and roll the service onto it with `aws ecs update-service --cluster devops-aws-farm --service devops-aws-farm --task-definition devops-aws-farm`. The pipeline does both steps for you.
+The pipeline does all three steps for you.
 
 ## Project Structure
 
