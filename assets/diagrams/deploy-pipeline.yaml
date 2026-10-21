@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Sagargupta16/orrery/main/skills/orrery/references/diagram.schema.json
+# Rendered with orrery (github.com/Sagargupta16/orrery):
+#   orrery render assets/diagrams/deploy-pipeline.yaml -o assets/diagrams/deploy-pipeline -f svg --theme both
+# Reviewed at README width: orrery review assets/diagrams/deploy-pipeline.yaml --width 880
+title: deploy.yml, from a manual run to ECS
+subtitle: The tests always run. Everything after them waits for DEPLOY_ENABLED=true and the AWS setup in aws/README.md
+direction: right
+legend:
+  dashed: Disabled until DEPLOY_ENABLED=true
+
+groups:
+  gh: { type: box, label: "GitHub Actions: deploy.yml", icon: logos:github-actions, evidence: .github/workflows/deploy.yml:1 }
+  job: { type: box, dashed: true, label: "Deploy job (production env)", cols: 1, in: gh, evidence: [".github/workflows/deploy.yml:67#DEPLOY_ENABLED", ".github/workflows/deploy.yml:70#production"] }
+  cloud: { type: aws:cloud, label: "AWS Cloud (set up by hand, see aws/)", evidence: aws/README.md:3 }
+  iam: { type: aws:generic, label: IAM (global), in: cloud, evidence: aws/README.md:26#create-role }
+  region: { type: aws:region, label: "Region (AWS_REGION)", cols: 1, in: cloud, evidence: .github/workflows/deploy.yml:12#AWS_REGION }
+
+nodes:
+  dev: { icon: github:person, label: Developer, note: Run workflow, evidence: .github/workflows/deploy.yml:8#workflow_dispatch }
+  test: { icon: si:pytest, label: Test job, note: "pytest + MongoDB 8.2, 80% gate", in: gh, evidence: .github/workflows/deploy.yml:59#cov-fail-under }
+  demo: { icon: github:skip, label: Demo job, note: "default: deploy skipped", in: gh, align: test, evidence: .github/workflows/deploy.yml:136#DEPLOY_ENABLED }
+  login: { icon: github:key, label: OIDC login, note: no stored AWS keys, in: job, evidence: .github/workflows/deploy.yml:81#configure-aws-credentials }
+  build: { icon: logos:docker-icon, label: docker build, note: "tag :commit-sha", in: job, evidence: .github/workflows/deploy.yml:96#github.sha }
+  render: { icon: github:file-code, label: Render task def, note: latest revision + new image, in: job, evidence: .github/workflows/deploy.yml:110#amazon-ecs-render-task-definition }
+  roll: { icon: github:rocket, label: ECS deploy, note: waits for steady state, in: job, evidence: .github/workflows/deploy.yml:124#wait-for-service-stability }
+  smoke: { icon: github:pulse, label: Smoke test, note: curl APP_URL/health, in: job, evidence: .github/workflows/deploy.yml:130#curl }
+  role: { icon: aws:identity-access-management-role, label: IAM deploy role, note: trusts this repo's production env, in: iam, evidence: aws/github-oidc-trust-policy.json:14#production }
+  ecr: { icon: aws:elastic-container-registry, label: Amazon ECR, note: immutable tags, in: region, evidence: aws/README.md:33#IMMUTABLE }
+  ecs: { icon: aws:elastic-container-service, label: Amazon ECS, note: "Fargate service, circuit breaker", in: region, evidence: aws/README.md:59#deploymentCircuitBreaker }
+
+edges:
+  - dev -> test
+  - test -> demo
+  - test --> login: DEPLOY_ENABLED=true
+  - login --> build --> render --> roll --> smoke
+  - login --> role: { evidence: aws/github-oidc-trust-policy.json:10#AssumeRoleWithWebIdentity }
+  - build --> ecr: { label: push, evidence: .github/workflows/deploy.yml:102#docker push }
+  - roll --> ecs: { evidence: .github/workflows/deploy.yml:119#amazon-ecs-deploy-task-definition }
+  - ecr --> ecs: { label: pull, evidence: aws/task-definition.json:16#image }
+  - smoke --> ecs: { label: GET /health, evidence: .github/workflows/deploy.yml:130#health }

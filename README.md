@@ -7,6 +7,14 @@ A FARM-stack app (FastAPI, React 19, MongoDB) packaged as a single Docker image,
 
 > Note: This is a sample/reference project. It is not actively deployed. `ci.yml` runs on every push and pull request; the two AWS pipelines run manually and in demo mode (see [CI/CD demo mode](#cicd-demo-mode)).
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/diagrams/deploy-pipeline-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/diagrams/deploy-pipeline-light.svg">
+  <img width="880" src="assets/diagrams/deploy-pipeline-light.svg" alt="The deploy.yml pipeline. A developer runs the workflow by hand and the test job runs pytest against MongoDB 8.2 with an 80% coverage gate. By default the demo job runs and the deploy is skipped. With DEPLOY_ENABLED=true the deploy job, in the production environment, logs in to AWS with GitHub OIDC by assuming the IAM deploy role, builds the Docker image tagged with the commit SHA and pushes it to Amazon ECR, renders the task definition, deploys it to the Amazon ECS Fargate service and waits for a steady state, then smoke tests /health. ECS pulls the image from ECR. Dashed lines and boxes are disabled until DEPLOY_ENABLED=true, and the AWS side is set up by hand from aws/README.md.">
+</picture>
+
+The spec behind the picture is [`assets/diagrams/deploy-pipeline.yaml`](assets/diagrams/deploy-pipeline.yaml), rendered with [orrery](https://github.com/Sagargupta16/orrery).
+
 ![User management on desktop](assets/screenshots/users-desktop.png)
 
 | Blogs on desktop | Users on a phone | Blogs on a phone |
@@ -78,44 +86,19 @@ DevOps-AWS-FARM is a small user and blog CRUD app whose real subject is the deli
 
 ### Application
 
-```mermaid
-flowchart LR
-    browser["Browser"] -->|"GET / (static React build)"| app
-    browser -->|"JSON: /user, /blog"| app
-    probe["Docker / ECS / ALB health check"] -->|"GET /health"| app
-    subgraph image["Docker image (python:3.14-slim, non-root)"]
-        app["FastAPI + Uvicorn :8000"]
-        routes["routes/ (HTTP, response models)"]
-        services["services/ (Mongo queries, bcrypt)"]
-        models["models/ (Pydantic v2 validation)"]
-        static["client_build/ (Vite output)"]
-        app --> routes --> services
-        routes -.-> models
-        app --> static
-    end
-    services --> mongo[("MongoDB 8.2 or Atlas")]
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/diagrams/application-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/diagrams/application-light.svg">
+  <img width="880" src="assets/diagrams/application-light.svg" alt="The application. A browser requests /, /user and /blog, and the Docker, ECS and ALB health checks request /health, from FastAPI and Uvicorn on port 8000 inside one Docker image (python:3.14-slim, non-root). FastAPI serves the React 19 build from client_build/, built by Vite, and hands API calls to routes/ (HTTP and the Pydantic v2 models), which call services/ (Mongo queries and bcrypt), which reach MongoDB 8.2 or Atlas through MONGODB_URL.">
+</picture>
+
+The spec behind the picture is [`assets/diagrams/application.yaml`](assets/diagrams/application.yaml), rendered with [orrery](https://github.com/Sagargupta16/orrery).
 
 The MongoDB connection is resolved in this order: the `MONGODB_URL` environment variable, then `config/secrets.yml`, then `mongodb://localhost:27017/blogging`.
 
 ### AWS deployment
 
-```mermaid
-flowchart LR
-    dev["manual run (workflow_dispatch)"] --> test["test job: pytest + MongoDB service"]
-    test --> flag{"DEPLOY_ENABLED = true?"}
-    flag -->|"no (default)"| demo["demo job: deploy skipped"]
-    flag -->|"yes"| approve["production environment approval"]
-    approve -->|"OIDC token"| sts["AWS STS: assume deploy role"]
-    sts --> build["docker build"]
-    build -->|"tag :commit-sha"| ecr[("Amazon ECR")]
-    ecr --> render["render task definition from the family"]
-    render --> ecs["Amazon ECS service"]
-    ecs -->|"wait for steady state, circuit breaker rolls back"| live["new tasks healthy"]
-    live -->|"curl APP_URL/health"| smoke["smoke test"]
-```
-
-This is `deploy.yml`. It never runs on push. With `DEPLOY_ENABLED` unset it stops after the tests; set it and the AWS variables from [aws/README.md](aws/README.md) and the same run deploys.
+[The pipeline figure at the top](#devops-aws-farm) is `deploy.yml`. It never runs on push. With `DEPLOY_ENABLED` unset it stops after the tests; set it and the AWS variables from [aws/README.md](aws/README.md) and the same run deploys.
 
 ## CI/CD Pipelines
 
@@ -415,6 +398,7 @@ DevOps-AWS-FARM/
 │       ├── ci.yml          # Lint, test (MongoDB service), client build on every push/PR
 │       ├── deploy.yml      # Manual: test -> OIDC -> ECR push -> ECS deploy (demo mode)
 │       └── main.yml        # Manual: full quality pipeline -> ECR publish -> ECS (demo mode)
+├── assets/diagrams/        # README diagrams: orrery specs and the SVGs rendered from them
 ├── assets/screenshots/     # README screenshots (generated by client/scripts/screenshots.mjs)
 ├── aws/                    # OIDC trust policy, deploy role policy, task definition, setup guide
 ├── client/                 # React 19 + Vite frontend

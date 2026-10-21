@@ -38,6 +38,8 @@ Frontend dev server: `npm run dev` from `client/` (port 3000; Vite proxies `/use
 
 README screenshots: `npm run screenshots` from `client/` against a running, seeded app (`BASE_URL` overrides `http://localhost:8000`); writes `assets/screenshots/*.png`.
 
+README diagrams: orrery specs in `assets/diagrams/*.yaml`, each with its render command in the header (`-f svg --theme both` writes the `-light` and `-dark` SVGs). Change a workflow, `aws/` or the app layering and the matching spec changes with it; `orrery verify <spec>` fails when an `evidence:` line has moved.
+
 ## Test
 
 ```
