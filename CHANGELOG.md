@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.2] - 2026-10-21
+
+### Changed
+
+- Repository renamed from `DevOps-AWS-FARM` to `farm-stack-aws-ecs` (GitHub redirects the old URL). README title, badge, clone commands and tree, the FastAPI app title and the OIDC trust policy follow it. The trust policy's `sub` condition is now `repo:Sagargupta16/farm-stack-aws-ecs:environment:production`; a deploy role created from the old template must get the same change in IAM, or `deploy.yml` can no longer assume it. AWS resource names (`devops-aws-farm` ECR repository, ECS cluster and service, roles, log group, secret) are unchanged
+
 ## [1.5.1] - 2026-10-21
 
 ### Changed
