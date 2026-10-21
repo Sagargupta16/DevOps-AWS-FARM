@@ -7,11 +7,13 @@ A FARM-stack app (FastAPI, React 19, MongoDB) packaged as a single Docker image,
 
 > Note: This is a sample/reference project. It is not actively deployed. `ci.yml` runs on every push and pull request; the two AWS pipelines run manually and in demo mode (see [CI/CD demo mode](#cicd-demo-mode)).
 
+<!-- markdownlint-disable MD033 -->
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/diagrams/deploy-pipeline-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="assets/diagrams/deploy-pipeline-light.svg">
   <img width="880" src="assets/diagrams/deploy-pipeline-light.svg" alt="The deploy.yml pipeline. A developer runs the workflow by hand and the test job runs pytest against MongoDB 8.2 with an 80% coverage gate. By default the demo job runs and the deploy is skipped. With DEPLOY_ENABLED=true the deploy job, in the production environment, logs in to AWS with GitHub OIDC by assuming the IAM deploy role, builds the Docker image tagged with the commit SHA and pushes it to Amazon ECR, renders the task definition, deploys it to the Amazon ECS Fargate service and waits for a steady state, then smoke tests /health. ECS pulls the image from ECR. Dashed lines and boxes are disabled until DEPLOY_ENABLED=true, and the AWS side is set up by hand from aws/README.md.">
 </picture>
+<!-- markdownlint-enable MD033 -->
 
 The spec behind the picture is [`assets/diagrams/deploy-pipeline.yaml`](assets/diagrams/deploy-pipeline.yaml), rendered with [orrery](https://github.com/Sagargupta16/orrery).
 
@@ -86,11 +88,13 @@ DevOps-AWS-FARM is a small user and blog CRUD app whose real subject is the deli
 
 ### Application
 
+<!-- markdownlint-disable MD033 -->
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/diagrams/application-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="assets/diagrams/application-light.svg">
   <img width="880" src="assets/diagrams/application-light.svg" alt="The application. A browser requests /, /user and /blog, and the Docker, ECS and ALB health checks request /health, from FastAPI and Uvicorn on port 8000 inside one Docker image (python:3.14-slim, non-root). FastAPI serves the React 19 build from client_build/, built by Vite, and hands API calls to routes/ (HTTP and the Pydantic v2 models), which call services/ (Mongo queries and bcrypt), which reach MongoDB 8.2 or Atlas through MONGODB_URL.">
 </picture>
+<!-- markdownlint-enable MD033 -->
 
 The spec behind the picture is [`assets/diagrams/application.yaml`](assets/diagrams/application.yaml), rendered with [orrery](https://github.com/Sagargupta16/orrery).
 
