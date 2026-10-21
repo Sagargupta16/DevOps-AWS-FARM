@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.1] - 2026-10-21
+
+### Changed
+
+- README diagrams drawn with [orrery](https://github.com/Sagargupta16/orrery): the `deploy.yml` pipeline at the top (GitHub Actions to the IAM deploy role, Amazon ECR and Amazon ECS, with everything behind `DEPLOY_ENABLED` dashed) and the application under Architecture, each in a light and a dark version. They replace the two Mermaid diagrams. The specs live in `assets/diagrams/*.yaml` with an `evidence:` path on every node, because `/docs/` is gitignored
+
 ## [1.5.0] - 2026-10-18
 
 ### Added

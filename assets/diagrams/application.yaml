@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Sagargupta16/orrery/main/skills/orrery/references/diagram.schema.json
+# Rendered with orrery (github.com/Sagargupta16/orrery):
+#   orrery render assets/diagrams/application.yaml -o assets/diagrams/application -f svg --theme both
+# Reviewed at README width: orrery review assets/diagrams/application.yaml --width 880
+title: One image serves the API and the React build
+subtitle: The same container runs under Docker Compose and on ECS; MONGODB_URL picks the database
+direction: right
+
+groups:
+  image: { type: box, label: "Docker image (python:3.14-slim, non-root)", icon: logos:docker-icon, evidence: Dockerfile:9#python }
+
+nodes:
+  browser: { icon: tabler:browser, label: Browser, note: "GET /, /user, /blog", evidence: client/src/App.jsx:41#axios }
+  probe: { icon: github:pulse, label: Health checks, note: "Docker, ECS, ALB", evidence: [Dockerfile:23#HEALTHCHECK, aws/task-definition.json:29#healthCheck] }
+  app: { icon: logos:fastapi-icon, label: FastAPI + Uvicorn, note: ":8000, main.py", in: image, evidence: Dockerfile:26#uvicorn }
+  static: { icon: logos:react, label: React 19 build, note: client_build/ from Vite, in: image, align: routes, evidence: main.py:50#StaticFiles }
+  routes: { icon: tabler:route, label: routes/, note: "HTTP + Pydantic v2 models", in: image, evidence: main.py:27#include_router }
+  services: { icon: github:code, label: services/, note: "Mongo queries, bcrypt", in: image, align: routes, evidence: services/user_services.py:36#bcrypt }
+  mongo: { icon: logos:mongodb-icon, label: MongoDB, note: 8.2 or Atlas, evidence: [docker-compose.yml:4#mongo, config/secrets_parser.py:47#MongoClient] }
+
+edges:
+  - browser -> app
+  - probe -> app: { label: GET /health, evidence: routes/health_routes.py:11#/health }
+  - app -> static: { evidence: main.py:50#mount }
+  - app -> routes: { evidence: main.py:29#include_router }
+  - routes -> services: { evidence: routes/user_routes.py:21#create_user_route }
+  - services -> mongo: { evidence: config/secrets_parser.py:7#MONGODB_URL }
