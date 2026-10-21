@@ -1,6 +1,6 @@
-# DevOps-AWS-FARM
+# farm-stack-aws-ecs
 
-[![CI](https://github.com/Sagargupta16/DevOps-AWS-FARM/actions/workflows/ci.yml/badge.svg)](https://github.com/Sagargupta16/DevOps-AWS-FARM/actions/workflows/ci.yml)
+[![CI](https://github.com/Sagargupta16/farm-stack-aws-ecs/actions/workflows/ci.yml/badge.svg)](https://github.com/Sagargupta16/farm-stack-aws-ecs/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A FARM-stack app (FastAPI, React 19, MongoDB) packaged as a single Docker image, with GitHub Actions pipelines: lint, test and build on every push and pull request, plus a manually dispatched pipeline that pushes the image to Amazon ECR and rolls an Amazon ECS service (off by default, see demo mode below).
@@ -30,8 +30,8 @@ Captured from a local run with the demo data from `scripts/seed.py` (see [Screen
 One command, no cloud account needed:
 
 ```bash
-git clone https://github.com/Sagargupta16/DevOps-AWS-FARM.git
-cd DevOps-AWS-FARM
+git clone https://github.com/Sagargupta16/farm-stack-aws-ecs.git
+cd farm-stack-aws-ecs
 docker compose up --build
 ```
 
@@ -67,7 +67,7 @@ python scripts/seed.py
 
 ## Overview
 
-DevOps-AWS-FARM is a small user and blog CRUD app whose real subject is the delivery pipeline around it. The React client is built by Vite and served by FastAPI from the same container, so one image covers the whole app and one ECS service runs it. Every push runs `ci.yml` (lint, tests, client build). The manually dispatched AWS pipelines lay out the rest of the path to a stable ECS service: a MongoDB service container for integration tests, keyless AWS access through GitHub OIDC, a SHA-tagged image in ECR, and an ECS rollout that waits for the service to stabilise.
+farm-stack-aws-ecs is a small user and blog CRUD app whose real subject is the delivery pipeline around it. The React client is built by Vite and served by FastAPI from the same container, so one image covers the whole app and one ECS service runs it. Every push runs `ci.yml` (lint, tests, client build). The manually dispatched AWS pipelines lay out the rest of the path to a stable ECS service: a MongoDB service container for integration tests, keyless AWS access through GitHub OIDC, a SHA-tagged image in ECR, and an ECS rollout that waits for the service to stabilise.
 
 ## Features
 
@@ -151,8 +151,8 @@ The two AWS pipelines run in demo mode. They show the full flow without touching
 #### 1. Clone the repository
 
 ```bash
-git clone https://github.com/Sagargupta16/DevOps-AWS-FARM.git
-cd DevOps-AWS-FARM
+git clone https://github.com/Sagargupta16/farm-stack-aws-ecs.git
+cd farm-stack-aws-ecs
 ```
 
 #### 2. Backend setup
@@ -396,7 +396,7 @@ The pipeline does all three steps for you.
 ## Project Structure
 
 ```
-DevOps-AWS-FARM/
+farm-stack-aws-ecs/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml          # Lint, test (MongoDB service), client build on every push/PR

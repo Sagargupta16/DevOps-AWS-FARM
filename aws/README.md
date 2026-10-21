@@ -6,7 +6,7 @@ The pipeline holds no AWS keys. GitHub issues the job an OIDC token, and AWS exc
 
 | File | What it is |
 | --- | --- |
-| [`github-oidc-trust-policy.json`](github-oidc-trust-policy.json) | Trust policy for the deploy role. The `sub` condition pins it to `repo:Sagargupta16/DevOps-AWS-FARM:environment:production`, so another repo, a fork or a job outside the environment cannot assume it |
+| [`github-oidc-trust-policy.json`](github-oidc-trust-policy.json) | Trust policy for the deploy role. The `sub` condition pins it to `repo:Sagargupta16/farm-stack-aws-ecs:environment:production`, so another repo, a fork or a job outside the environment cannot assume it |
 | [`deploy-role-policy.json`](deploy-role-policy.json) | Least-privilege permissions for the deploy role: push to one ECR repository, register task definitions, update one ECS service, pass the two task roles to ECS only |
 | [`task-definition.json`](task-definition.json) | First revision of the Fargate task: 0.25 vCPU, 512 MiB, `MONGODB_URL` from Secrets Manager, JSON logs to CloudWatch, container health check on `/health` |
 

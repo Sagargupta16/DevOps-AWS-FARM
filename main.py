@@ -22,7 +22,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="DevOps AWS FARM", lifespan=lifespan)
+app = FastAPI(title="farm-stack-aws-ecs", lifespan=lifespan)
 
 app.include_router(health_routes.router)
 app.include_router(blog_routes.router)
