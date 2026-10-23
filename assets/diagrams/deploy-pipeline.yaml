@@ -25,13 +25,13 @@ nodes:
   roll: { icon: github:rocket, label: ECS deploy, note: waits for steady state, in: job, evidence: .github/workflows/deploy.yml:124#wait-for-service-stability }
   smoke: { icon: github:pulse, label: Smoke test, note: curl APP_URL/health, in: job, evidence: .github/workflows/deploy.yml:130#curl }
   role: { icon: aws:identity-access-management-role, label: IAM deploy role, note: trusts this repo's production env, in: iam, evidence: aws/github-oidc-trust-policy.json:14#production }
-  ecr: { icon: aws:elastic-container-registry, label: Amazon ECR, note: immutable tags, in: region, evidence: aws/README.md:33#IMMUTABLE }
-  ecs: { icon: aws:elastic-container-service, label: Amazon ECS, note: "Fargate service, circuit breaker", in: region, evidence: aws/README.md:59#deploymentCircuitBreaker }
+  ecr: { icon: aws:elastic-container-registry, label: Amazon Elastic Container Registry, note: immutable tags, in: region, evidence: aws/README.md:33#IMMUTABLE }
+  ecs: { icon: aws:elastic-container-service, label: Amazon Elastic Container Service, note: "Fargate service, circuit breaker", in: region, evidence: aws/README.md:59#deploymentCircuitBreaker }
 
 edges:
   - dev -> test
   - test -> demo
-  - test --> login: DEPLOY_ENABLED=true
+  - test --> login: DEPLOY_ENABLED
   - login --> build --> render --> roll --> smoke
   - login --> role: { evidence: aws/github-oidc-trust-policy.json:10#AssumeRoleWithWebIdentity }
   - build --> ecr: { label: push, evidence: .github/workflows/deploy.yml:102#docker push }
