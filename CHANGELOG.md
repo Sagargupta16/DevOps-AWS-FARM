@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.3] - 2026-10-23
+
+### Changed
+
+- README diagrams redrawn with orrery 0.12.0's 64 px icons (48 px before). `application.yaml` is unchanged (847x603, `orrery review --width 880` scores 98.4). In `deploy-pipeline.yaml` the AWS nodes use their full names, Amazon Elastic Container Registry and Amazon Elastic Container Service, as the AWS diagram guidelines ask when no short form is introduced, and the gate label on the test to deploy job edge is `DEPLOY_ENABLED` (the legend and subtitle still say `=true`), so it no longer sits on the job's border. It scores 96.2 at 1025x1101 and `orrery verify` finds all 22 evidence entries
+
 ## [1.5.2] - 2026-10-21
 
 ### Changed
